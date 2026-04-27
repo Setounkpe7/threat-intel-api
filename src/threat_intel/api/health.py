@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import text
@@ -13,7 +14,10 @@ router = APIRouter(tags=["meta"])
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health(request: Request, session: AsyncSession = Depends(get_db)) -> HealthResponse:
+async def health(
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> HealthResponse:
     start_time: datetime = request.app.state.start_time
     uptime = int((datetime.now(UTC) - start_time).total_seconds())
 
