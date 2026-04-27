@@ -1,0 +1,54 @@
+id: ecommerce
+name: E-commerce & Retail
+sector: retail
+description: |
+  Online merchants, marketplaces and headless commerce platforms. Focus on
+  cart/checkout flows, payment integrations and customer data.
+
+keywords:
+  - checkout
+  - shopping cart
+  - storefront
+  - magecart
+  - skimmer
+  - payment gateway
+  - paypal
+  - stripe
+  - apple pay
+  - google pay
+  - merchant
+
+technologies:
+  - Magento
+  - Shopify
+  - WooCommerce
+  - PrestaShop
+  - Salesforce Commerce Cloud
+  - SAP Hybris
+  - BigCommerce
+  - Oracle Commerce
+
+cwe_priorities:
+  - CWE-89    # SQL Injection
+  - CWE-79    # XSS
+  - CWE-352   # CSRF
+  - CWE-639   # IDOR
+  - CWE-94    # Code injection
+
+excluded_keywords:
+  - minecraft
+  - game
+
+compliance:
+  - PCI-DSS
+  - GDPR
+  - CCPA
+
+cvss_threshold: 7.0
+
+priority_boost_keywords:
+  - card skimming
+  - magecart
+  - checkout bypass
+  - coupon abuse
+  - account takeover

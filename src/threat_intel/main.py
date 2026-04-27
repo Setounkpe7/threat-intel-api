@@ -7,11 +7,15 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
 from threat_intel.api.health import router as health_router
+from threat_intel.api.security import limiter
 from threat_intel.api.v1 import api_v1
 from threat_intel.collectors.nvd import NVDCollector
 from threat_intel.core.config import Settings, get_settings
@@ -28,6 +32,8 @@ from threat_intel.core.scheduler import build_scheduler
 from threat_intel.models.base import SourceKind
 from threat_intel.models.source import Source
 from threat_intel.services.ingestion import IngestionService
+from threat_intel.services.profile_loader import SectorProfileLoader
+from threat_intel.services.scoring_job import ThreatScoringJob, daily_recent_window
 
 logger = structlog.get_logger(__name__)
 
@@ -65,9 +71,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         factory = session_factory(engine)
         http = httpx.AsyncClient(timeout=30.0)
         nvd = NVDCollector(http_client=http, settings=settings)
-        ingestion = IngestionService(session_factory=factory, collectors=[nvd])
+        scoring_job = ThreatScoringJob(session_factory=factory)
+        ingestion = IngestionService(
+            session_factory=factory, collectors=[nvd], scoring_job=scoring_job
+        )
 
         await _ensure_source_row(factory, "nvd", SourceKind.cve_feed, settings.nvd_base_url)
+
+        profile_loader = SectorProfileLoader(
+            session_factory=factory, profiles_root=settings.profiles_path
+        )
+        load_result = await profile_loader.load_all()
+        logger.info(
+            "sector_profiles_startup",
+            public=load_result.public_count,
+            private=load_result.private_count,
+            added=len(load_result.added),
+            updated=len(load_result.updated),
+            errors=len(load_result.errors),
+        )
 
         async def run_nvd() -> None:
             try:
@@ -75,12 +97,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except Exception:  # noqa: BLE001
                 logger.exception("scheduled_nvd_run_failed")
 
-        scheduler = build_scheduler(settings, run_nvd)
+        async def run_daily_rescore() -> None:
+            try:
+                await scoring_job.score_threats_since(daily_recent_window())
+            except Exception:  # noqa: BLE001
+                logger.exception("scheduled_rescore_failed")
+
+        scheduler = build_scheduler(settings, run_nvd, run_daily_rescore)
         scheduler.start()
 
         app.state.settings = settings
         app.state.session_factory = factory
         app.state.ingestion = ingestion
+        app.state.profile_loader = profile_loader
+        app.state.scoring_job = scoring_job
         app.state.collector_names = ["nvd"]
         app.state.start_time = datetime.now(UTC)
 
@@ -93,17 +123,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="CyberThreat Intelligence API",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
     )
+
+    app.state.settings = settings  # also exposed by lifespan but available at startup
+    app.state.limiter = limiter
+    limiter.enabled = settings.rate_limit_enabled
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    app.add_middleware(SlowAPIMiddleware)
 
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=settings.cors_origins,
             allow_credentials=False,
-            allow_methods=["GET"],
-            allow_headers=["*"],
+            allow_methods=["GET", "POST"],
+            allow_headers=["*", "X-Admin-Key"],
         )
 
     @app.exception_handler(ThreatNotFoundException)

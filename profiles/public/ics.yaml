@@ -1,0 +1,61 @@
+id: ics
+name: Industrial Control Systems / OT
+sector: industrial
+description: |
+  Operational technology, ICS/SCADA, manufacturing, energy and utilities.
+  Heavy weight on PLC/HMI vendors and protocol-level vulnerabilities.
+
+keywords:
+  - scada
+  - plc
+  - hmi
+  - rtu
+  - dcs
+  - mes
+  - modbus
+  - dnp3
+  - opc-ua
+  - ot
+  - industrial
+  - manufacturing
+  - power grid
+  - water treatment
+
+technologies:
+  - Siemens
+  - Rockwell Automation
+  - Schneider Electric
+  - ABB
+  - Honeywell
+  - Yokogawa
+  - Mitsubishi Electric
+  - GE Digital
+  - Wonderware
+  - Ignition
+
+cwe_priorities:
+  - CWE-119   # Buffer overflow
+  - CWE-78    # OS command injection
+  - CWE-787   # Out-of-bounds write
+  - CWE-306   # Missing authentication
+  - CWE-798   # Hard-coded credentials
+  - CWE-22    # Path traversal
+
+excluded_keywords:
+  - minecraft
+  - mod
+  - game
+
+compliance:
+  - NIST-SP-800-82
+  - IEC-62443
+  - NERC-CIP
+
+cvss_threshold: 6.0
+
+priority_boost_keywords:
+  - safety system
+  - kinetic impact
+  - remote code execution
+  - firmware backdoor
+  - protocol fuzzing

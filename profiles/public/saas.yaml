@@ -1,0 +1,63 @@
+id: saas
+name: SaaS / B2B Cloud
+sector: software
+description: |
+  Multi-tenant SaaS providers and cloud-native B2B platforms. Threats relevant
+  to public-facing web apps, identity, multi-tenancy and supply chain.
+
+keywords:
+  - saas
+  - api
+  - oauth
+  - oidc
+  - jwt
+  - sso
+  - tenant
+  - multi-tenant
+  - webhook
+  - rest api
+
+technologies:
+  - Node.js
+  - Express
+  - Next.js
+  - React
+  - Python
+  - Django
+  - FastAPI
+  - PostgreSQL
+  - Redis
+  - Kubernetes
+  - Docker
+  - AWS
+  - GCP
+  - Azure
+  - Auth0
+  - Okta
+  - Stripe
+
+cwe_priorities:
+  - CWE-79    # XSS
+  - CWE-89    # SQL Injection
+  - CWE-918   # SSRF
+  - CWE-639   # IDOR
+  - CWE-352   # CSRF
+  - CWE-1321  # Prototype pollution
+
+excluded_keywords:
+  - minecraft
+  - mod
+  - game
+
+compliance:
+  - SOC2
+  - GDPR
+  - ISO-27001
+
+cvss_threshold: 7.0
+
+priority_boost_keywords:
+  - supply chain
+  - dependency confusion
+  - leaked credentials
+  - tenant isolation

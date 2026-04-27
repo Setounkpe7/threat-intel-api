@@ -10,6 +10,8 @@ from threat_intel.models.base import (
 )
 from threat_intel.models.cve import CVE
 from threat_intel.models.cwe import CWE, threat_cwe
+from threat_intel.models.sector_profile import SectorProfile
+from threat_intel.models.sector_score import ThreatSectorScore
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
 
@@ -18,10 +20,12 @@ __all__ = [
     "CVE",
     "CWE",
     "GUID",
+    "SectorProfile",
     "Severity",
     "Source",
     "SourceKind",
     "Threat",
+    "ThreatSectorScore",
     "TimestampMixin",
     "UtcDateTime",
     "threat_cwe",

@@ -25,11 +25,17 @@ def configure_logging(env: Literal["dev", "prod"], level: str = "INFO") -> None:
         structlog.dev.ConsoleRenderer() if env == "dev" else structlog.processors.JSONRenderer()
     )
 
+    # Resolve sys.stdout at write time (not config time) so that pytest's
+    # capsys / temporary stream replacement does not leave the cached logger
+    # pointing at a closed file.
+    def _stdout_factory(*_: object) -> structlog.PrintLogger:
+        return structlog.PrintLogger(file=sys.stdout)
+
     structlog.configure(
         processors=[*shared_processors, renderer],
         wrapper_class=structlog.make_filtering_bound_logger(level_int),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
-        cache_logger_on_first_use=True,
+        logger_factory=_stdout_factory,
+        cache_logger_on_first_use=False,
     )
 
     logging.basicConfig(

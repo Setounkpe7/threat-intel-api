@@ -1,0 +1,60 @@
+id: finance
+name: Finance & Banking
+sector: financial-services
+description: |
+  Retail and corporate banking, payment processors, card networks, and fintech.
+  Optimised for threats touching the payment rails, online banking and core
+  banking systems.
+
+keywords:
+  - banking
+  - payment
+  - swift
+  - sepa
+  - ach
+  - card
+  - pos
+  - atm
+  - online banking
+  - fintech
+  - mobile banking
+
+technologies:
+  - Java
+  - Spring
+  - Tomcat
+  - WebSphere
+  - WebLogic
+  - Oracle Database
+  - PostgreSQL
+  - SAP
+  - JBoss
+  - Apache Struts
+
+cwe_priorities:
+  - CWE-89    # SQL Injection
+  - CWE-79    # XSS
+  - CWE-352   # CSRF
+  - CWE-287   # Improper authentication
+  - CWE-798   # Hard-coded credentials
+  - CWE-22    # Path traversal
+
+excluded_keywords:
+  - minecraft
+  - game
+  - mod
+
+compliance:
+  - PCI-DSS
+  - SOX
+  - GDPR
+
+cvss_threshold: 7.0
+
+priority_boost_keywords:
+  - wire transfer
+  - swift network
+  - card present
+  - card not present
+  - card skimming
+  - online banking fraud
