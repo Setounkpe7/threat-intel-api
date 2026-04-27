@@ -28,6 +28,8 @@ async def list_threats(
     limit: int = 50,
     offset: int = 0,
 ) -> ThreatPage:
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
     base = select(Threat)
     count_base = select(func.count(Threat.id))
 
@@ -49,7 +51,9 @@ async def list_threats(
     rows = (
         (
             await session.execute(
-                base.order_by(Threat.published_at.desc()).limit(limit).offset(offset)
+                base.order_by(Threat.published_at.desc(), Threat.id.desc())
+                .limit(limit)
+                .offset(offset)
             )
         )
         .scalars()

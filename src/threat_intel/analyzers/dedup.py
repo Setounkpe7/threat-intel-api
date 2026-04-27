@@ -3,7 +3,6 @@ from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from threat_intel.collectors.base import ThreatDraft
 from threat_intel.models.cve import CVE
@@ -14,6 +13,11 @@ from threat_intel.models.threat import Threat
 UpsertResult = Literal["inserted", "updated", "unchanged"]
 
 
+# CWE upsert assumes a single ingestion writer at a time. Two concurrent
+# runs that both encounter a previously-unseen CWE would both pass the
+# IN(...) check and one INSERT would IntegrityError. M1 has a single
+# hourly scheduler tick, so this is safe. When concurrent collectors
+# land in M2, switch to INSERT ... ON CONFLICT DO NOTHING.
 async def _get_or_create_cwes(session: AsyncSession, cwe_ids: list[str]) -> list[CWE]:
     if not cwe_ids:
         return []
@@ -36,10 +40,8 @@ async def upsert_threat(
 
     Returns one of "inserted", "updated", or "unchanged".
     """
-    stmt = (
-        select(Threat)
-        .options(selectinload(Threat.cwes))
-        .where(Threat.source_id == source.id, Threat.external_id == draft.external_id)
+    stmt = select(Threat).where(
+        Threat.source_id == source.id, Threat.external_id == draft.external_id
     )
     existing = (await session.execute(stmt)).scalar_one_or_none()
 
