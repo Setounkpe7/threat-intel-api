@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
+import structlog
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,8 @@ from threat_intel import __version__
 from threat_intel.api.deps import get_db
 from threat_intel.schemas.health import CollectorHealth, HealthResponse, Stats
 from threat_intel.services.threats import collector_health, stats
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["meta"])
 
@@ -21,10 +24,11 @@ async def health(
     start_time: datetime = request.app.state.start_time
     uptime = int((datetime.now(UTC) - start_time).total_seconds())
 
-    db_status = "connected"
+    db_status: Literal["connected", "disconnected"] = "connected"
     try:
         await session.execute(text("SELECT 1"))
     except Exception:
+        logger.exception("health_db_probe_failed")
         db_status = "disconnected"
 
     collectors_state: dict[str, CollectorHealth] = {}

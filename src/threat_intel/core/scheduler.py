@@ -22,4 +22,9 @@ def build_scheduler(
         max_instances=1,
         coalesce=True,
     )
+    logger.info(
+        "scheduler.job_registered",
+        job_id="ingest_nvd",
+        interval_minutes=settings.nvd_fetch_interval_minutes,
+    )
     return scheduler
