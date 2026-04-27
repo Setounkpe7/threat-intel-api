@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -38,7 +38,7 @@ def test_health_response_shape():
         database="connected",
         collectors={
             "nvd": CollectorHealth(
-                last_run=datetime.now(timezone.utc),
+                last_run=datetime.now(UTC),
                 last_success=True,
                 threats_collected_24h=5,
             )

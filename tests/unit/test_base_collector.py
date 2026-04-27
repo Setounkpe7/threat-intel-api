@@ -1,5 +1,5 @@
 import inspect
-from collections.abc import AsyncIterator
+from datetime import UTC
 
 from threat_intel.collectors.base import BaseCollector, RawEvent, ThreatDraft
 
@@ -13,10 +13,11 @@ def test_raw_event_is_immutable():
 
 
 def test_threat_draft_validates_required_fields():
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from threat_intel.models.base import Severity
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     d = ThreatDraft(
         source_name="nvd",
         external_id="CVE-2026-1",
