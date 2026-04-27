@@ -41,3 +41,31 @@ async def test_list_threats_excludes_raw_data(client, seeded_db):
     resp = await client.get("/api/v1/threats?limit=1")
     item = resp.json()["items"][0]
     assert "raw_data" not in item
+
+
+async def test_list_threats_filter_by_source(client, seeded_db):
+    resp = await client.get("/api/v1/threats", params={"source": "nvd"})
+    assert resp.json()["total"] == 3
+
+    resp = await client.get("/api/v1/threats", params={"source": "does-not-exist"})
+    assert resp.json()["total"] == 0
+
+
+async def test_list_threats_filter_by_multiple_severities(client, seeded_db):
+    resp = await client.get(
+        "/api/v1/threats",
+        params=[("severity", "critical"), ("severity", "high")],
+    )
+    body = resp.json()
+    assert body["total"] == 2
+    severities = {item["severity"] for item in body["items"]}
+    assert severities == {"critical", "high"}
+
+
+async def test_list_threats_limit_boundary(client, seeded_db):
+    resp = await client.get("/api/v1/threats", params={"limit": 200})
+    assert resp.status_code == 200
+    assert resp.json()["limit"] == 200
+
+    resp = await client.get("/api/v1/threats", params={"limit": 201})
+    assert resp.status_code == 422

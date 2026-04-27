@@ -101,7 +101,8 @@ async def seeded_db(factory):
 @pytest_asyncio.fixture
 async def app(factory, settings):
     app = create_app(settings=settings)
-    # bypass real lifespan: install state directly
+    # Bypass the real lifespan to avoid starting APScheduler and skipping
+    # _ensure_source_row in tests; install only the state the routes read.
     app.state.settings = settings
     app.state.session_factory = factory
     app.state.collector_names = ["nvd"]

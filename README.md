@@ -14,8 +14,8 @@ pip install -e ".[dev]"
 cp .env.example .env
 # Edit .env if needed (defaults work with docker-compose Postgres)
 
-# For local SQLite dev:
-echo "DATABASE_URL=sqlite+aiosqlite:///./threat_intel.db" >> .env
+# For local SQLite dev (no Docker), edit .env to use:
+#   DATABASE_URL=sqlite+aiosqlite:///./threat_intel.db
 
 alembic upgrade head
 uvicorn threat_intel.main:app --reload

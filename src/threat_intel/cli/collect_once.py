@@ -12,7 +12,12 @@ from threat_intel.models.base import SourceKind
 from threat_intel.models.source import Source
 from threat_intel.services.ingestion import IngestionService
 
-app = typer.Typer(help="One-shot operations for the threat-intel-api.")
+app = typer.Typer(help="One-shot operations for the threat-intel-api.", no_args_is_help=True)
+
+
+@app.callback()
+def _root() -> None:
+    """One-shot ingestion operations."""
 
 
 @app.command()
