@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from threat_intel.collectors.nvd import NVDCollector
 from threat_intel.core.config import Settings
 from threat_intel.core.db import build_engine, session_factory
+from threat_intel.core.exceptions import CollectorHTTPError
 from threat_intel.models.base import Base, SourceKind
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
@@ -70,7 +71,7 @@ async def test_ingestion_records_error_on_failure():
         mock.get("/cves/2.0").mock(return_value=httpx.Response(500))
         collector = NVDCollector(http_client=client, settings=settings)
         service = IngestionService(session_factory=factory, collectors=[collector])
-        with pytest.raises(Exception):
+        with pytest.raises(CollectorHTTPError):
             await service.run("nvd")
 
     async with factory() as s:

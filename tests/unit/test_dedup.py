@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -46,7 +46,7 @@ async def session():
 
 
 async def test_upsert_inserts_new(session):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     src = (await session.execute(select(Source).where(Source.name == "nvd"))).scalar_one()
     result = await upsert_threat(session, src, _draft("CVE-2026-100", now))
     await session.commit()
@@ -56,7 +56,7 @@ async def test_upsert_inserts_new(session):
 
 
 async def test_upsert_noop_when_unchanged(session):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     src = (await session.execute(select(Source).where(Source.name == "nvd"))).scalar_one()
     await upsert_threat(session, src, _draft("CVE-2026-101", now))
     await session.commit()
@@ -66,7 +66,7 @@ async def test_upsert_noop_when_unchanged(session):
 
 
 async def test_upsert_updates_when_modified(session):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     later = now + timedelta(hours=1)
     src = (await session.execute(select(Source).where(Source.name == "nvd"))).scalar_one()
     await upsert_threat(session, src, _draft("CVE-2026-102", now))
