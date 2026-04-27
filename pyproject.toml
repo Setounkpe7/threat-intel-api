@@ -1,0 +1,66 @@
+[project]
+name = "threat-intel-api"
+version = "0.1.0"
+description = "CyberThreat Intelligence API — aggregates OSINT CVE feeds"
+requires-python = ">=3.12"
+authors = [{ name = "Michel-Ange Doubogan", email = "Mdoubogan@yahoo.fr" }]
+readme = "README.md"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "httpx[http2]>=0.27",
+  "sqlalchemy[asyncio]>=2.0.30",
+  "asyncpg>=0.29",
+  "aiosqlite>=0.20",
+  "alembic>=1.13",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "apscheduler>=3.10,<4",
+  "structlog>=24.1",
+  "tenacity>=8.3",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.23",
+  "respx>=0.21",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-pytz",
+]
+
+[project.scripts]
+threat-intel = "threat_intel.cli.collect_once:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/threat_intel"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ANN", "S", "T20", "RET", "SIM"]
+ignore = ["ANN101", "ANN102", "S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

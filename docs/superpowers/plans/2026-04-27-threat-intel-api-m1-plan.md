@@ -310,12 +310,14 @@ Expected: FAIL — `ModuleNotFoundError`.
 
 - [ ] **Step 4: Write `core/config.py`**
 
+> **Note on `NoDecode`:** pydantic-settings ≥ 2.3 attempts to JSON-decode complex types (like `list[str]`) from env values *before* `field_validator(mode="before")` runs. Without `NoDecode`, `CORS_ORIGINS=https://a.com,https://b.com` would raise `JSONDecodeError`. `NoDecode` opts the field out of pre-decoding so the validator receives the raw string.
+
 ```python
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -327,7 +329,7 @@ class Settings(BaseSettings):
 
     database_url: str
 
-    cors_origins: list[str] = Field(default_factory=list)
+    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     nvd_base_url: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     nvd_api_key: str | None = None
@@ -343,7 +345,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
