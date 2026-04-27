@@ -1,0 +1,66 @@
+{
+  "resultsPerPage": 2,
+  "startIndex": 0,
+  "totalResults": 2,
+  "format": "NVD_CVE",
+  "version": "2.0",
+  "timestamp": "2026-04-26T00:00:00.000",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2026-0001",
+        "published": "2026-04-26T08:00:00.000",
+        "lastModified": "2026-04-26T09:30:00.000",
+        "vulnStatus": "Analyzed",
+        "descriptions": [
+          { "lang": "en", "value": "Remote code execution in ExampleProduct via crafted input." },
+          { "lang": "es", "value": "Ejecución remota de código." }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "source": "nvd@nist.gov",
+              "type": "Primary",
+              "cvssData": {
+                "version": "3.1",
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "baseScore": 9.8,
+                "baseSeverity": "CRITICAL"
+              }
+            }
+          ]
+        },
+        "weaknesses": [
+          { "source": "nvd@nist.gov", "type": "Primary",
+            "description": [ { "lang": "en", "value": "CWE-79" } ] }
+        ],
+        "configurations": [
+          { "nodes": [
+            { "operator": "OR", "negate": false,
+              "cpeMatch": [
+                { "vulnerable": true, "criteria": "cpe:2.3:a:example:product:1.0:*:*:*:*:*:*:*" }
+              ] }
+          ] }
+        ],
+        "references": [
+          { "url": "https://example.test/advisory/1", "source": "nvd@nist.gov" }
+        ]
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2026-0002",
+        "published": "2026-04-26T07:00:00.000",
+        "lastModified": "2026-04-26T07:00:00.000",
+        "vulnStatus": "Awaiting Analysis",
+        "descriptions": [
+          { "lang": "en", "value": "Information disclosure in OtherProduct." }
+        ],
+        "metrics": {},
+        "weaknesses": [],
+        "configurations": [],
+        "references": []
+      }
+    }
+  ]
+}
