@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: a05d1784230f
+Revision ID: 494ab243a00d
 Revises: 
-Create Date: 2026-04-27 12:37:46.379671
+Create Date: 2026-04-27 12:48:59.289474
 
 """
 from typing import Sequence, Union
@@ -10,11 +10,10 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 import threat_intel.models.base
-import threat_intel.models.threat
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a05d1784230f'
+revision: str = '494ab243a00d'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -43,12 +42,12 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_source_name'), 'source', ['name'], unique=True)
     op.create_table('threat',
-    sa.Column('id', threat_intel.models.threat.GUID(), nullable=False),
+    sa.Column('id', threat_intel.models.base.GUID(), nullable=False),
     sa.Column('source_id', sa.Integer(), nullable=False),
     sa.Column('external_id', sa.String(length=128), nullable=False),
     sa.Column('title', sa.Text(), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('severity', sa.String(length=16), nullable=False),
+    sa.Column('severity', sa.Enum('critical', 'high', 'medium', 'low', 'none', 'unknown', name='severity'), nullable=False),
     sa.Column('cvss_score', sa.Float(), nullable=True),
     sa.Column('cvss_vector', sa.String(length=255), nullable=True),
     sa.Column('cvss_version', sa.String(length=8), nullable=True),
@@ -68,13 +67,13 @@ def upgrade() -> None:
     op.create_index(op.f('ix_threat_source_id'), 'threat', ['source_id'], unique=False)
     op.create_table('cve',
     sa.Column('cve_id', sa.String(length=32), nullable=False),
-    sa.Column('threat_id', threat_intel.models.threat.GUID(), nullable=False),
+    sa.Column('threat_id', threat_intel.models.base.GUID(), nullable=False),
     sa.ForeignKeyConstraint(['threat_id'], ['threat.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('cve_id'),
     sa.UniqueConstraint('threat_id')
     )
     op.create_table('threat_cwe',
-    sa.Column('threat_id', threat_intel.models.threat.GUID(), nullable=False),
+    sa.Column('threat_id', threat_intel.models.base.GUID(), nullable=False),
     sa.Column('cwe_id', sa.String(length=32), nullable=False),
     sa.ForeignKeyConstraint(['cwe_id'], ['cwe.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['threat_id'], ['threat.id'], ondelete='CASCADE'),

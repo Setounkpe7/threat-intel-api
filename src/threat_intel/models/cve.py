@@ -3,8 +3,8 @@ import uuid
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from threat_intel.models.base import Base
-from threat_intel.models.threat import GUID, Threat
+from threat_intel.models.base import GUID, Base
+from threat_intel.models.threat import Threat
 
 
 class CVE(Base):

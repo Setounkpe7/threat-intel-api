@@ -7,11 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from threat_intel.core.config import get_settings
-from threat_intel.models.base import Base
-import threat_intel.models.source  # noqa: F401
-import threat_intel.models.threat  # noqa: F401
-import threat_intel.models.cve  # noqa: F401
-import threat_intel.models.cwe  # noqa: F401
+from threat_intel.models import Base  # noqa: F401  -- registers all tables on Base.metadata
 
 config = context.config
 if config.config_file_name is not None:
