@@ -66,7 +66,8 @@ class NVDCollector(BaseCollector):
                 items = metrics.get(key) or []
                 if items:
                     data = items[0].get("cvssData", {})
-                    cvss_score = data.get("baseScore")
+                    score = data.get("baseScore")
+                    cvss_score = float(score) if score is not None else None
                     cvss_vector = data.get("vectorString")
                     cvss_version = data.get("version")
                     sev_label = (
@@ -160,7 +161,8 @@ class NVDCollector(BaseCollector):
                 "startIndex": start_index,
             }
             page = await self._request_page(params)
-            for item in page.get("vulnerabilities") or []:
+            items = page.get("vulnerabilities") or []
+            for item in items:
                 cve_id = item.get("cve", {}).get("id", "")
                 yield RawEvent(
                     external_id=cve_id,
@@ -168,6 +170,9 @@ class NVDCollector(BaseCollector):
                     fetched_at=datetime.now(UTC),
                 )
             total = int(page.get("totalResults", 0))
-            start_index += int(page.get("resultsPerPage", self._PAGE_SIZE))
+            returned = int(page.get("resultsPerPage", self._PAGE_SIZE))
+            if returned <= 0 or not items:
+                break  # defensive: server inconsistency, stop rather than loop forever
+            start_index += returned
             if start_index >= total:
                 break
