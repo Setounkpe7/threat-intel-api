@@ -187,6 +187,12 @@ jobs:
     name: trivy image scan
     runs-on: ubuntu-latest
     needs: docker-build
+    # Workflow-level perms are read-only; this job needs write to push SARIF
+    # to the GitHub code-scanning UI (Security tab). On PRs, GitHub grants
+    # the right token implicitly; on push events it doesn't.
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       - name: Download image artefact
