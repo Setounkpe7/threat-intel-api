@@ -86,6 +86,20 @@ class Settings(BaseSettings):
             return cleaned or None
         return v
 
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _normalize_postgres_scheme(cls, v: str) -> str:
+        """Rewrite synchronous 'postgresql://' to 'postgresql+asyncpg://'.
+
+        Railway's managed Postgres exposes DATABASE_URL with the synchronous
+        scheme by default. The runtime uses asyncpg and requires the
+        '+asyncpg' driver suffix. Other schemes (sqlite+aiosqlite,
+        postgresql+psycopg, postgresql+asyncpg) are left untouched.
+        """
+        if v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v.removeprefix("postgresql://")
+        return v
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors(cls, v: object) -> object:
