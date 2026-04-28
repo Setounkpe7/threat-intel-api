@@ -54,9 +54,7 @@ async def _ensure_source_row(
     url: str,
 ) -> None:
     async with factory() as s:
-        existing = (
-            await s.execute(select(Source).where(Source.name == name))
-        ).scalar_one_or_none()
+        existing = (await s.execute(select(Source).where(Source.name == name))).scalar_one_or_none()
         if existing is None:
             s.add(Source(name=name, kind=kind, url=url, enabled=True))
             await s.commit()

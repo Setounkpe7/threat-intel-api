@@ -22,7 +22,7 @@ import logging
 import logging.handlers
 import re
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import Any, Literal
 
@@ -58,9 +58,7 @@ _SENSITIVE_KEY_TOKENS: tuple[str, ...] = (
 _AUTHZ_INLINE = re.compile(r"(?i)(authorization\s*[:=]\s*)(bearer\s+)?\S+")
 _COOKIE_INLINE = re.compile(r"(?i)(set-?cookie\s*[:=]\s*)\S+")
 _JWT_BLOB = re.compile(r"\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\b")
-_KV_SECRET = re.compile(
-    r"(?i)\b(token|secret|api[_-]?key|password)=([A-Za-z0-9+/_=\-\.]{16,})"
-)
+_KV_SECRET = re.compile(r"(?i)\b(token|secret|api[_-]?key|password)=([A-Za-z0-9+/_=\-\.]{16,})")
 _BARE_HEX = re.compile(r"\b[a-fA-F0-9]{32,}\b")
 
 
@@ -69,7 +67,7 @@ def _is_sensitive_key(key: str) -> bool:
     return any(token in lower for token in _SENSITIVE_KEY_TOKENS)
 
 
-def _scrub_value(value: Any) -> Any:
+def _scrub_value(value: Any) -> Any:  # noqa: ANN401 — recursive over arbitrary log payloads
     if isinstance(value, Mapping):
         return _scrub_mapping(value)
     if isinstance(value, list):
@@ -93,18 +91,16 @@ def _scrub_mapping(d: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _scrub_string(s: str) -> str:
-    result = s
-    result = _AUTHZ_INLINE.sub(lambda m: f"{m.group(1)}{REDACTED}", result)
+    result = _AUTHZ_INLINE.sub(lambda m: f"{m.group(1)}{REDACTED}", s)
     result = _COOKIE_INLINE.sub(lambda m: f"{m.group(1)}{REDACTED}", result)
     result = _JWT_BLOB.sub(REDACTED, result)
     result = _KV_SECRET.sub(lambda m: f"{m.group(1)}={REDACTED}", result)
-    result = _BARE_HEX.sub(REDACTED, result)
-    return result
+    return _BARE_HEX.sub(REDACTED, result)
 
 
 def _scrub_processor(
-    _logger: object, _method: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+    _logger: object, _method: str, event_dict: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
     """structlog processor — runs on every event before rendering."""
     return _scrub_mapping(event_dict)
 

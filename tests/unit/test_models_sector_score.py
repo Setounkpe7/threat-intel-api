@@ -58,7 +58,10 @@ async def test_threat_sector_score_roundtrip():
         threat = await _make_threat(s, src.id)
         s.add(
             SectorProfile(
-                id="finance", name="F", sector="banking", loaded_at=now,
+                id="finance",
+                name="F",
+                sector="banking",
+                loaded_at=now,
             )
         )
         await s.flush()
@@ -96,8 +99,11 @@ async def test_composite_pk_prevents_duplicates():
         await s.flush()
         s.add(
             ThreatSectorScore(
-                threat_id=threat_id, sector_id="finance",
-                score=50.0, score_breakdown={}, calculated_at=now,
+                threat_id=threat_id,
+                sector_id="finance",
+                score=50.0,
+                score_breakdown={},
+                calculated_at=now,
             )
         )
         await s.commit()
@@ -106,8 +112,11 @@ async def test_composite_pk_prevents_duplicates():
         async with factory() as s:
             s.add(
                 ThreatSectorScore(
-                    threat_id=threat_id, sector_id="finance",
-                    score=99.0, score_breakdown={}, calculated_at=now,
+                    threat_id=threat_id,
+                    sector_id="finance",
+                    score=99.0,
+                    score_breakdown={},
+                    calculated_at=now,
                 )
             )
             await s.commit()

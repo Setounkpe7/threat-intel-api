@@ -27,9 +27,7 @@ async def test_private_profile_threats_404_without_admin(client, security_seed):
     assert resp.status_code == 404
 
 
-async def test_private_profile_secret_keywords_not_in_public_responses(
-    client, security_seed
-):
+async def test_private_profile_secret_keywords_not_in_public_responses(client, security_seed):
     """Even at the bytes level, no internal keyword/tech should bleed through."""
     paths = [
         "/api/v1/sectors",

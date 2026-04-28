@@ -5,6 +5,8 @@ have to fire 100 requests per assertion (and so we don't pollute the
 module-level limiter used elsewhere).
 """
 
+import contextlib
+
 import pytest
 import pytest_asyncio
 from slowapi import Limiter
@@ -16,10 +18,9 @@ from threat_intel.api import security as security_module
 def _reset_limiter():
     """Clear slowapi state before each test so prior tests' counters don't bleed."""
     yield
-    try:
+    # slowapi versions differ on whether reset() exists / what it raises.
+    with contextlib.suppress(Exception):
         security_module.limiter.reset()
-    except Exception:  # pragma: no cover — slowapi versions differ
-        pass
 
 
 @pytest_asyncio.fixture
@@ -42,8 +43,7 @@ async def test_excess_requests_get_429(client, security_seed):
         r = await client.get("/api/v1/sectors")
         statuses.append(r.status_code)
     assert any(s == 429 for s in statuses), (
-        f"Expected at least one 429 within {burst} requests, got: "
-        f"{sorted(set(statuses))}"
+        f"Expected at least one 429 within {burst} requests, got: {sorted(set(statuses))}"
     )
 
 

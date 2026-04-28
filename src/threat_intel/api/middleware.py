@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 # CSP tuned for FastAPI: the only HTML route is /docs (Swagger UI) which
 # loads JS/CSS/font from jsdelivr and inline-styles its own page.
@@ -51,7 +52,7 @@ class SecurityHeadersConfig:
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, config: SecurityHeadersConfig | None = None) -> None:
+    def __init__(self, app: ASGIApp, config: SecurityHeadersConfig | None = None) -> None:
         super().__init__(app)
         self._config = config or SecurityHeadersConfig()
         self._hsts = self._build_hsts(self._config)

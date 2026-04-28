@@ -60,7 +60,11 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
 
     @field_validator(
-        "app_name", "app_env", "log_level", "database_url", "nvd_base_url",
+        "app_name",
+        "app_env",
+        "log_level",
+        "database_url",
+        "nvd_base_url",
         mode="before",
     )
     @classmethod

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -44,12 +44,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
       - name: Install
         run: uv sync --extra security --frozen
+      - name: Add setuptools (semgrep imports pkg_resources, gone from py3.12+)
+        run: uv pip install setuptools
       - name: bandit
         run: uv run bandit -r src -x src/threat_intel/cli --skip B101 -f sarif -o bandit.sarif || true
       - name: bandit (gating run)
@@ -85,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -116,7 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -194,7 +196,7 @@ jobs:
       - name: Load image
         run: docker load -i image.tar
       - name: Trivy — fail on CRITICAL
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ needs.docker-build.outputs.image-tag }}
           exit-code: "1"
@@ -204,7 +206,7 @@ jobs:
           format: table
       - name: Trivy — full SARIF (CRITICAL + HIGH, non-blocking)
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ needs.docker-build.outputs.image-tag }}
           severity: CRITICAL,HIGH

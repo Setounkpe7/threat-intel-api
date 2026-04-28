@@ -49,8 +49,7 @@ def nvd() -> None:
             service = IngestionService(session_factory=factory, collectors=[collector])
             result = await service.run("nvd")
             typer.echo(
-                f"inserted={result.inserted} updated={result.updated} "
-                f"unchanged={result.unchanged}"
+                f"inserted={result.inserted} updated={result.updated} unchanged={result.unchanged}"
             )
         await engine.dispose()
 

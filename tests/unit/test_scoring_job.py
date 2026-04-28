@@ -136,10 +136,18 @@ async def test_score_with_no_profiles_writes_nothing(factory):
         tid = uuid.uuid4()
         s.add(
             Threat(
-                id=tid, source_id=src.id, external_id="CVE-1", title="x",
-                description="x", severity=Severity.high, cvss_score=1.0,
-                affected_products=[], references=[],
-                published_at=now, last_modified_at=now, raw_data={},
+                id=tid,
+                source_id=src.id,
+                external_id="CVE-1",
+                title="x",
+                description="x",
+                severity=Severity.high,
+                cvss_score=1.0,
+                affected_products=[],
+                references=[],
+                published_at=now,
+                last_modified_at=now,
+                raw_data={},
             )
         )
         await s.commit()
@@ -158,9 +166,7 @@ async def test_score_threats_since_picks_recent(factory):
     threat_ids = await _seed(factory, threat_count=3)
     # Backdate one threat
     async with factory() as s:
-        t0 = (
-            await s.execute(select(Threat).where(Threat.id == threat_ids[0]))
-        ).scalar_one()
+        t0 = (await s.execute(select(Threat).where(Threat.id == threat_ids[0]))).scalar_one()
         t0.last_modified_at = datetime.now(UTC) - timedelta(days=30)
         await s.commit()
 

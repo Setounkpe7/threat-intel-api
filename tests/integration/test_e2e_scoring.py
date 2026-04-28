@@ -35,18 +35,28 @@ async def test_ingestion_triggers_scoring_against_seeded_profiles():
     now = datetime.now(UTC)
     async with factory() as s:
         s.add(Source(name="nvd", kind=SourceKind.cve_feed, url=settings.nvd_base_url, enabled=True))
-        s.add(SectorProfile(
-            id="generic", name="Generic", sector="x",
-            keywords=["remote code execution"],
-            cvss_threshold=7.0,
-            visibility="public", loaded_at=now,
-        ))
-        s.add(SectorProfile(
-            id="zero", name="Zero", sector="x",
-            keywords=["definitely-not-in-the-fixture"],
-            cvss_threshold=99.0,
-            visibility="public", loaded_at=now,
-        ))
+        s.add(
+            SectorProfile(
+                id="generic",
+                name="Generic",
+                sector="x",
+                keywords=["remote code execution"],
+                cvss_threshold=7.0,
+                visibility="public",
+                loaded_at=now,
+            )
+        )
+        s.add(
+            SectorProfile(
+                id="zero",
+                name="Zero",
+                sector="x",
+                keywords=["definitely-not-in-the-fixture"],
+                cvss_threshold=99.0,
+                visibility="public",
+                loaded_at=now,
+            )
+        )
         await s.commit()
 
     scoring_job = ThreatScoringJob(factory)

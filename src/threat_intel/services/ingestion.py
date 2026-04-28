@@ -105,9 +105,7 @@ class IngestionService:
                         .all()
                     )
                 if affected_ids:
-                    score_result = await self._scoring_job.score_threat_ids(
-                        list(affected_ids)
-                    )
+                    score_result = await self._scoring_job.score_threat_ids(list(affected_ids))
                     log.info(
                         "ingestion.scoring_done",
                         threats=score_result.threats_scored,

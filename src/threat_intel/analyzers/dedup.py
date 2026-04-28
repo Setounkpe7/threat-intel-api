@@ -21,9 +21,7 @@ UpsertResult = Literal["inserted", "updated", "unchanged"]
 async def _get_or_create_cwes(session: AsyncSession, cwe_ids: list[str]) -> list[CWE]:
     if not cwe_ids:
         return []
-    existing = (
-        (await session.execute(select(CWE).where(CWE.id.in_(cwe_ids)))).scalars().all()
-    )
+    existing = (await session.execute(select(CWE).where(CWE.id.in_(cwe_ids)))).scalars().all()
     found = {c.id for c in existing}
     new_rows = [CWE(id=cid) for cid in cwe_ids if cid not in found]
     for row in new_rows:
@@ -33,9 +31,7 @@ async def _get_or_create_cwes(session: AsyncSession, cwe_ids: list[str]) -> list
     return [*existing, *new_rows]
 
 
-async def upsert_threat(
-    session: AsyncSession, source: Source, draft: ThreatDraft
-) -> UpsertResult:
+async def upsert_threat(session: AsyncSession, source: Source, draft: ThreatDraft) -> UpsertResult:
     """Insert or update a Threat row keyed by (source_id, external_id).
 
     Returns one of "inserted", "updated", or "unchanged".

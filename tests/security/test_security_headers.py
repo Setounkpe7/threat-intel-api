@@ -26,9 +26,7 @@ def _assert_required(headers: dict[str, str]) -> None:
     for name, expected in _expected_required_headers().items():
         assert name in lower, f"missing header: {name}"
         if isinstance(expected, str):
-            assert lower[name] == expected, (
-                f"header {name}: got {lower[name]!r}, want {expected!r}"
-            )
+            assert lower[name] == expected, f"header {name}: got {lower[name]!r}, want {expected!r}"
         else:
             for token in expected:
                 assert token in lower[name], (

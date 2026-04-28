@@ -127,11 +127,16 @@ async def test_fetch_paginates_until_total_reached():
             "published": "2026-04-26T06:00:00.000",
             "lastModified": "2026-04-26T06:00:00.000",
             "descriptions": [{"lang": "en", "value": "third"}],
-            "metrics": {}, "weaknesses": [], "configurations": [], "references": [],
+            "metrics": {},
+            "weaknesses": [],
+            "configurations": [],
+            "references": [],
         }
     }
     page2 = {
-        "totalResults": 3, "resultsPerPage": 2, "startIndex": 2,
+        "totalResults": 3,
+        "resultsPerPage": 2,
+        "startIndex": 2,
         "vulnerabilities": [extra_cve],
     }
     settings = Settings(

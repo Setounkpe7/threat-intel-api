@@ -7,7 +7,6 @@ literally (200, with an empty result set).
 
 import pytest
 
-
 SQLI_PAYLOADS = [
     "' OR '1'='1",
     "1; DROP TABLE threat;--",
@@ -35,9 +34,7 @@ async def test_threats_endpoint_filters_reject_or_no_op(client, security_seed, p
 async def test_cve_lookup_rejects_garbage(client, security_seed, payload):
     """CVE id has a known shape — anything else must 4xx, never 5xx."""
     r = await client.get(f"/api/v1/cve/{payload}")
-    assert r.status_code < 500, (
-        f"CVE-{payload!r} blew up with {r.status_code} — must be 4xx"
-    )
+    assert r.status_code < 500, f"CVE-{payload!r} blew up with {r.status_code} — must be 4xx"
 
 
 @pytest.mark.parametrize("payload", SQLI_PAYLOADS)
@@ -51,12 +48,8 @@ async def test_sector_id_path_param_safe(client, security_seed, payload):
 
 @pytest.mark.parametrize("payload", SQLI_PAYLOADS)
 async def test_min_score_rejects_non_numeric(client, security_seed, payload):
-    r = await client.get(
-        "/api/v1/sectors/finance/threats", params={"min_score": payload}
-    )
-    assert r.status_code in {400, 422}, (
-        f"min_score={payload!r} returned {r.status_code}"
-    )
+    r = await client.get("/api/v1/sectors/finance/threats", params={"min_score": payload})
+    assert r.status_code in {400, 422}, f"min_score={payload!r} returned {r.status_code}"
 
 
 async def test_pagination_extremes_are_validated(client, security_seed):

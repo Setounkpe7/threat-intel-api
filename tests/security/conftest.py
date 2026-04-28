@@ -47,36 +47,54 @@ async def security_seed(factory):
             s.add(t)
             threats.append(t)
 
-        s.add(SectorProfile(
-            id="finance", name="Finance", sector="banking",
-            description="Retail banking",
-            keywords=["payment"], technologies=["Tomcat"],
-            cwe_priorities=["CWE-79"], cvss_threshold=7.0,
-            visibility="public", source_file="profiles/public/finance.yaml",
-            loaded_at=now,
-        ))
-        s.add(SectorProfile(
-            id="corp-secret", name="Internal Corp",
-            sector="enterprise",
-            description="Internal stack — must not leak through public API",
-            keywords=["confidential-internal-keyword"],
-            technologies=["MySecretInternalTool"],
-            visibility="private",
-            source_file="profiles/private/corp-secret.yaml",
-            loaded_at=now,
-        ))
+        s.add(
+            SectorProfile(
+                id="finance",
+                name="Finance",
+                sector="banking",
+                description="Retail banking",
+                keywords=["payment"],
+                technologies=["Tomcat"],
+                cwe_priorities=["CWE-79"],
+                cvss_threshold=7.0,
+                visibility="public",
+                source_file="profiles/public/finance.yaml",
+                loaded_at=now,
+            )
+        )
+        s.add(
+            SectorProfile(
+                id="corp-secret",
+                name="Internal Corp",
+                sector="enterprise",
+                description="Internal stack — must not leak through public API",
+                keywords=["confidential-internal-keyword"],
+                technologies=["MySecretInternalTool"],
+                visibility="private",
+                source_file="profiles/private/corp-secret.yaml",
+                loaded_at=now,
+            )
+        )
         await s.flush()
 
         for t, score in zip(threats, [85.0, 60.0], strict=True):
-            s.add(ThreatSectorScore(
-                threat_id=t.id, sector_id="finance", score=score,
-                score_breakdown={"final_score": score},
-                calculated_at=now,
-            ))
-            s.add(ThreatSectorScore(
-                threat_id=t.id, sector_id="corp-secret", score=score,
-                score_breakdown={"final_score": score},
-                calculated_at=now,
-            ))
+            s.add(
+                ThreatSectorScore(
+                    threat_id=t.id,
+                    sector_id="finance",
+                    score=score,
+                    score_breakdown={"final_score": score},
+                    calculated_at=now,
+                )
+            )
+            s.add(
+                ThreatSectorScore(
+                    threat_id=t.id,
+                    sector_id="corp-secret",
+                    score=score,
+                    score_breakdown={"final_score": score},
+                    calculated_at=now,
+                )
+            )
         await s.commit()
     return {"threat_ids": [t.id for t in threats]}

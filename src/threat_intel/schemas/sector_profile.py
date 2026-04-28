@@ -39,9 +39,7 @@ class SectorProfileSchema(BaseModel):
     @classmethod
     def _validate_slug(cls, v: str) -> str:
         if not SLUG_RE.match(v):
-            raise ValueError(
-                f"profile id must be a slug matching {SLUG_RE.pattern!r}, got {v!r}"
-            )
+            raise ValueError(f"profile id must be a slug matching {SLUG_RE.pattern!r}, got {v!r}")
         return v
 
     @field_validator("cwe_priorities")

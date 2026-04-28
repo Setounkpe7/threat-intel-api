@@ -43,9 +43,7 @@ async def test_admin_routes_reject_wrong_key(client, admin_settings, method, pat
 async def test_admin_returns_503_when_no_key_is_configured(client, settings):
     # Default settings fixture leaves admin_api_key=None.
     settings.admin_api_key = None
-    resp = await client.post(
-        "/api/v1/admin/reload-profiles", headers={"X-Admin-Key": "anything"}
-    )
+    resp = await client.post("/api/v1/admin/reload-profiles", headers={"X-Admin-Key": "anything"})
     assert resp.status_code == 503
 
 
