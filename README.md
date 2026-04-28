@@ -1,6 +1,12 @@
 # CyberThreat Intelligence API
 
-A REST API that aggregates OSINT cyber-threat feeds, deduplicates them, scores them against configurable **sector profiles**, and exposes the result via versioned endpoints. Milestone 1 shipped the ingestion pipeline for NVD plus three endpoints. Milestone 2 (current) adds sector-aware scoring, per-sector dashboards, RSS feeds, hot-reloadable YAML profiles, admin endpoints, and rate limiting.
+[![security](https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml)
+[![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#development)
+[![python](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/downloads/release/python-3120/)
+[![image size](https://img.shields.io/badge/docker-195MB-blue)](Dockerfile)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
+
+A REST API that aggregates OSINT cyber-threat feeds, deduplicates them, scores them against configurable **sector profiles**, and exposes the result via versioned endpoints. Milestone 1 shipped the ingestion pipeline for NVD plus three endpoints. Milestone 2 added sector-aware scoring, per-sector dashboards, RSS feeds, hot-reloadable YAML profiles, admin endpoints, and rate limiting. The current DevSecOps phase adds a hardened container, a CI/CD security gate, and a documented vulnerability disclosure path — see [SECURITY.md](SECURITY.md).
 
 ## Local install (no Docker)
 
@@ -168,6 +174,27 @@ pre-commit run --all-files        # one-off run on the whole tree
 ```
 
 The configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Hooks: ruff (lint + format), mypy strict, bandit, gitleaks, plus the standard whitespace / private-key / large-file guards.
+
+## Security
+
+| Area              | Where                                                          |
+|-------------------|----------------------------------------------------------------|
+| Disclosure policy | [SECURITY.md](SECURITY.md) — email contact + scope             |
+| Implemented controls | [docs/SECURITY.md](docs/SECURITY.md) — OWASP API Top 10 mapping |
+| Local audit       | `make security-audit` (bandit + pip-audit + semgrep)           |
+| CI gate           | [security.yml](.github/workflows/security.yml) — 7 jobs, must all pass to merge |
+| Container         | Hardened multi-stage Alpine image, non-root uid 1001, ~195 MB  |
+
+Quick checks:
+
+```bash
+make lint                 # ruff + ruff-format
+make typecheck            # mypy strict on src/
+make test                 # pytest with --cov-fail-under=80
+make security-audit       # bandit + pip-audit + semgrep
+make docker-build         # build hardened image
+make docker-scan          # hadolint + trivy (CRITICAL+HIGH)
+```
 
 ## Deliberately out of scope for M2
 
