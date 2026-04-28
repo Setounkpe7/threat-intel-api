@@ -50,8 +50,8 @@ jobs:
           enable-cache: true
       - name: Install
         run: uv sync --extra security --frozen
-      - name: Add setuptools (semgrep imports pkg_resources, gone from py3.12+)
-        run: uv pip install setuptools
+      - name: Add setuptools<81 (semgrep transitively imports pkg_resources, removed in setuptools 81+)
+        run: uv pip install "setuptools<81"
       - name: bandit
         run: uv run bandit -r src -x src/threat_intel/cli --skip B101 -f sarif -o bandit.sarif || true
       - name: bandit (gating run)
