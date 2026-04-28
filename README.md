@@ -1,6 +1,6 @@
 # CyberThreat Intelligence API
 
-A REST API that aggregates OSINT cyber-threat feeds, deduplicates them, and exposes them via versioned endpoints. Milestone 1 ships a working ingestion pipeline for the NVD CVE feed plus three endpoints (`/health`, `/api/v1/threats`, `/api/v1/cve/{cve_id}`).
+A REST API that aggregates OSINT cyber-threat feeds, deduplicates them, scores them against configurable **sector profiles**, and exposes the result via versioned endpoints. Milestone 1 shipped the ingestion pipeline for NVD plus three endpoints. Milestone 2 (current) adds sector-aware scoring, per-sector dashboards, RSS feeds, hot-reloadable YAML profiles, admin endpoints, and rate limiting.
 
 ## Local install (no Docker)
 
@@ -48,15 +48,76 @@ You should see something like `inserted=27 updated=0 unchanged=0`.
 
 ## Endpoints
 
+### Public
+
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health` | service status, DB state, per-collector last-run, stats |
 | GET | `/api/v1/threats` | paginated list, filters: `severity`, `since`, `source`, `limit`, `offset` |
 | GET | `/api/v1/cve/{cve_id}` | full detail (incl. `raw_data`) for a CVE |
+| GET | `/api/v1/sectors` | list public sector profiles (`?visibility=all` requires `X-Admin-Key`) |
+| GET | `/api/v1/sectors/{id}` | profile detail (private profiles return 404 without `X-Admin-Key`) |
+| GET | `/api/v1/sectors/{id}/threats` | scored threats for a sector (`?min_score`, `?limit`, `?since`) |
+| GET | `/api/v1/sectors/{id}/dashboard` | top 24h / top 7d / aggregate stats |
+| GET | `/api/v1/sectors/{id}/feed.rss` | RSS 2.0 feed (default `min_score=70`) |
+| GET | `/api/v1/stats/global` | aggregated stats for a future public dashboard |
 | GET | `/docs` | Swagger UI |
 | GET | `/openapi.json` | machine-readable schema |
 
-Errors are returned as `application/problem+json` (RFC 7807).
+### Admin (require `X-Admin-Key` header)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/v1/admin/reload-profiles` | re-scan `profiles/` and upsert (returns added/updated/removed/errors) |
+| POST | `/api/v1/admin/rescore-all` | queue a full rescoring in background (returns 202) |
+
+Public endpoints are rate-limited to 100 requests/minute per IP (`RATE_LIMIT_DEFAULT`). Errors are returned as `application/problem+json` (RFC 7807).
+
+## Sector profiles
+
+Each `profiles/public/*.yaml` (and `profiles/private/*.yaml`) declares one sector profile — a bundle of keywords, technologies, CWE priorities, exclusions, compliance tags, and a CVSS threshold. Every threat is scored against every profile, so adding a YAML and hot-reloading is enough to expose a new dashboard, threats endpoint, and RSS feed.
+
+See [profiles/README.md](profiles/README.md) for the schema and [docs/SCORING.md](docs/SCORING.md) for the scoring algorithm with a worked example.
+
+```bash
+# Add a profile
+$EDITOR profiles/public/my-org.yaml
+
+# Hot reload without restarting
+curl -X POST http://localhost:8000/api/v1/admin/reload-profiles \
+     -H "X-Admin-Key: $ADMIN_API_KEY"
+
+# Query the sector
+curl http://localhost:8000/api/v1/sectors/my-org/dashboard | jq
+```
+
+### Example: top-10 critical threats for finance
+
+```bash
+curl 'http://localhost:8000/api/v1/sectors/finance/threats?min_score=70&limit=10' | jq
+```
+
+### Example: subscribe to the RSS feed
+
+```bash
+curl 'http://localhost:8000/api/v1/sectors/finance/feed.rss?min_score=70' \
+  -H 'Accept: application/rss+xml'
+```
+
+### Architecture
+
+```mermaid
+flowchart LR
+    NVD[NVD feed] --> Collector
+    Collector --> Ingestion["IngestionService<br/>(dedup + upsert)"]
+    Ingestion --> Threat[(threat)]
+    Threat --> ScoringJob[ThreatScoringJob]
+    ProfileLoader[SectorProfileLoader] --> Profiles[(sector_profile)]
+    Profiles --> ScoringJob
+    ScoringJob --> Scores[(threat_sector_score)]
+    Scores --> API[/api/v1/sectors/.../]
+    Threat --> API
+```
 
 ## Project layout
 
@@ -96,6 +157,6 @@ ruff format src tests
 mypy src             # static types
 ```
 
-## Deliberately out of scope for M1
+## Deliberately out of scope for M2
 
-Other collectors (RSS, GitHub Advisories, OTX), NLP entity extraction, alerting webhooks, STIX export, Redis cache, authentication, sectoral scoring. The data model and collector interface are designed so each of those lands without breaking what's here.
+NLP entity extraction (M3), alerting webhooks (M4), STIX/TAXII export (M5), public dashboard frontend (M6), additional collectors — RSS / GitHub Advisories / OTX (later). The data model and collector interface are designed so each of those lands without breaking what's here.

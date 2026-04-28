@@ -1,0 +1,60 @@
+id: government
+name: Government & Public Sector
+sector: government
+description: |
+  Federal/state agencies, defense contractors, and public-sector IT.
+  Sensitive to nation-state activity, classified data exposure and identity
+  systems.
+
+keywords:
+  - government
+  - federal
+  - agency
+  - defense
+  - military
+  - classified
+  - fedramp
+  - nation-state
+  - apt
+  - citizen
+  - public records
+
+technologies:
+  - Active Directory
+  - Microsoft Exchange
+  - SharePoint
+  - VMware ESXi
+  - Cisco IOS
+  - Cisco ASA
+  - Pulse Secure
+  - Citrix NetScaler
+  - F5 BIG-IP
+  - Fortinet FortiGate
+  - Ivanti
+
+cwe_priorities:
+  - CWE-287   # Improper authentication
+  - CWE-269   # Improper privilege management
+  - CWE-918   # SSRF
+  - CWE-22    # Path traversal
+  - CWE-78    # OS command injection
+  - CWE-502   # Deserialization
+
+excluded_keywords:
+  - minecraft
+  - mod
+
+compliance:
+  - FISMA
+  - FedRAMP
+  - NIST-SP-800-53
+  - CMMC
+
+cvss_threshold: 7.0
+
+priority_boost_keywords:
+  - zero-day
+  - actively exploited
+  - apt
+  - kev catalog
+  - cisa advisory

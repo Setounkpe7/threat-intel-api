@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
@@ -41,6 +42,16 @@ class Settings(BaseSettings):
     nvd_api_key: str | None = None
     nvd_fetch_interval_minutes: int = 60
 
+    profiles_path: Path = Path("profiles")
+
+    # Admin API key required for /api/v1/admin/* and ?visibility=all.
+    # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+    admin_api_key: str | None = None
+
+    # Public-endpoint rate limit (slowapi format).
+    rate_limit_default: str = "100/minute"
+    rate_limit_enabled: bool = True
+
     @field_validator(
         "app_name", "app_env", "log_level", "database_url", "nvd_base_url",
         mode="before",
@@ -51,7 +62,7 @@ class Settings(BaseSettings):
             return _strip_inline_comment(v)
         return v
 
-    @field_validator("nvd_api_key", mode="before")
+    @field_validator("nvd_api_key", "admin_api_key", mode="before")
     @classmethod
     def _strip_optional_string(cls, v: object) -> object:
         if isinstance(v, str):

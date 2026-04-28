@@ -1,0 +1,58 @@
+id: healthcare
+name: Healthcare & Life Sciences
+sector: healthcare
+description: |
+  Hospitals, clinics, electronic health record (EHR) vendors, medical devices,
+  and pharmaceutical R&D. Skewed toward HIPAA-relevant data exposure and
+  device-side vulnerabilities.
+
+keywords:
+  - hospital
+  - clinic
+  - patient
+  - ehr
+  - emr
+  - hl7
+  - dicom
+  - pacs
+  - medical device
+  - hipaa
+  - phi
+  - pharmacy
+  - telemedicine
+
+technologies:
+  - Epic
+  - Cerner
+  - Meditech
+  - Allscripts
+  - HL7 FHIR
+  - Mirth Connect
+  - GE Healthcare
+  - Philips IntelliSpace
+
+cwe_priorities:
+  - CWE-732   # Incorrect permission assignment
+  - CWE-200   # Information exposure
+  - CWE-287   # Improper authentication
+  - CWE-798   # Hard-coded credentials
+  - CWE-307   # Improper restriction of authentication attempts
+
+excluded_keywords:
+  - minecraft
+  - game
+
+compliance:
+  - HIPAA
+  - HITECH
+  - GDPR
+  - FDA-510k
+
+cvss_threshold: 6.5
+
+priority_boost_keywords:
+  - ransomware
+  - phi exposure
+  - patient data
+  - medical record
+  - device firmware
