@@ -196,6 +196,12 @@ make docker-build         # build hardened image
 make docker-scan          # hadolint + trivy (CRITICAL+HIGH)
 ```
 
+## Deployment
+
+Production runs on [Railway](https://railway.app), with a managed Postgres add-on. A push on `main` triggers an auto-deploy; the only path to `main` is a PR with a green security gate, so unsafe code can't reach prod by construction.
+
+Operator runbook: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Covers first-time setup, the deploy flow, rollback, secrets rotation, and troubleshooting.
+
 ## Deliberately out of scope for M2
 
 NLP entity extraction (M3), alerting webhooks (M4), STIX/TAXII export (M5), public dashboard frontend (M6), additional collectors — RSS / GitHub Advisories / OTX (later). The data model and collector interface are designed so each of those lands without breaking what's here.
