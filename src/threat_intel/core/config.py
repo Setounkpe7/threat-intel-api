@@ -59,12 +59,17 @@ class Settings(BaseSettings):
     rate_limit_default: str = "100/minute"
     rate_limit_enabled: bool = True
 
+    # Sentry error tracking. Leave SENTRY_DSN blank to disable.
+    sentry_dsn: str | None = None
+    sentry_environment: str = "prod"
+
     @field_validator(
         "app_name",
         "app_env",
         "log_level",
         "database_url",
         "nvd_base_url",
+        "sentry_environment",
         mode="before",
     )
     @classmethod
@@ -73,7 +78,7 @@ class Settings(BaseSettings):
             return _strip_inline_comment(v)
         return v
 
-    @field_validator("nvd_api_key", "admin_api_key", mode="before")
+    @field_validator("nvd_api_key", "admin_api_key", "sentry_dsn", mode="before")
     @classmethod
     def _strip_optional_string(cls, v: object) -> object:
         if isinstance(v, str):
