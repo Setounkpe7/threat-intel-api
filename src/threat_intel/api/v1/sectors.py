@@ -38,9 +38,7 @@ async def list_sectors(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="visibility=all requires X-Admin-Key",
         )
-    profiles = await sector_svc.list_profiles(
-        session, include_private=(visibility == "all")
-    )
+    profiles = await sector_svc.list_profiles(session, include_private=(visibility == "all"))
     return SectorList(
         items=[SectorProfileSummary.model_validate(p) for p in profiles],
         total=len(profiles),
@@ -55,9 +53,7 @@ async def get_sector(
     sector_id: str,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SectorProfileRead:
-    profile = await sector_svc.get_profile(
-        session, sector_id, include_private=is_admin
-    )
+    profile = await sector_svc.get_profile(session, sector_id, include_private=is_admin)
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sector not found")
     return SectorProfileRead.model_validate(profile)
@@ -74,9 +70,7 @@ async def get_sector_threats(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     since: datetime | None = None,
 ) -> ScoredThreatList:
-    profile = await sector_svc.get_profile(
-        session, sector_id, include_private=is_admin
-    )
+    profile = await sector_svc.get_profile(session, sector_id, include_private=is_admin)
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sector not found")
     rows = await sector_svc.list_scored_threats(
@@ -106,14 +100,10 @@ async def get_sector_dashboard(
     sector_id: str,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SectorDashboard:
-    profile = await sector_svc.get_profile(
-        session, sector_id, include_private=is_admin
-    )
+    profile = await sector_svc.get_profile(session, sector_id, include_private=is_admin)
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sector not found")
-    top_24h, top_7d, stats = await sector_svc.sector_dashboard_payload(
-        session, sector_id=sector_id
-    )
+    top_24h, top_7d, stats = await sector_svc.sector_dashboard_payload(session, sector_id=sector_id)
 
     def _to_scored(rows: list[Any]) -> list[ScoredThreatRead]:
         return [
@@ -144,9 +134,7 @@ async def get_sector_feed(
     min_score: Annotated[float, Query(ge=0, le=100)] = 70.0,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> Response:
-    profile = await sector_svc.get_profile(
-        session, sector_id, include_private=is_admin
-    )
+    profile = await sector_svc.get_profile(session, sector_id, include_private=is_admin)
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sector not found")
 
@@ -161,9 +149,7 @@ async def get_sector_feed(
     fg.title(f"Threat Intelligence Feed — {profile.name}")
     fg.link(href=feed_url, rel="self")
     fg.link(href=f"{base}/api/v1/sectors/{sector_id}", rel="alternate")
-    fg.description(
-        f"Threats scored >= {min_score:.0f} for sector profile '{profile.name}'."
-    )
+    fg.description(f"Threats scored >= {min_score:.0f} for sector profile '{profile.name}'.")
     fg.language("en")
 
     for r in rows:

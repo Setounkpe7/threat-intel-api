@@ -43,6 +43,7 @@ class SectorList(BaseModel):
 
 class ScoredThreatRead(ThreatRead):
     """Threat fields plus its score and breakdown for a given sector."""
+
     score: float
     score_breakdown: dict[str, Any]
     calculated_at: datetime

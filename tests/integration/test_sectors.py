@@ -70,42 +70,68 @@ async def seeded_sectors(factory):
             s.add(t)
             threats.append(t)
 
-        s.add(SectorProfile(
-            id="finance", name="Finance", sector="banking",
-            description="Retail banking",
-            keywords=["payment"], technologies=["Tomcat"],
-            cwe_priorities=["CWE-79"], cvss_threshold=7.0,
-            visibility="public", source_file="profiles/public/finance.yaml",
-            loaded_at=now,
-        ))
-        s.add(SectorProfile(
-            id="saas", name="SaaS", sector="software",
-            keywords=[], technologies=[],
-            cwe_priorities=[], cvss_threshold=7.0,
-            visibility="public", source_file="profiles/public/saas.yaml",
-            loaded_at=now,
-        ))
-        s.add(SectorProfile(
-            id="corp", name="Internal", sector="enterprise",
-            visibility="private", source_file="profiles/private/corp.yaml",
-            loaded_at=now,
-        ))
+        s.add(
+            SectorProfile(
+                id="finance",
+                name="Finance",
+                sector="banking",
+                description="Retail banking",
+                keywords=["payment"],
+                technologies=["Tomcat"],
+                cwe_priorities=["CWE-79"],
+                cvss_threshold=7.0,
+                visibility="public",
+                source_file="profiles/public/finance.yaml",
+                loaded_at=now,
+            )
+        )
+        s.add(
+            SectorProfile(
+                id="saas",
+                name="SaaS",
+                sector="software",
+                keywords=[],
+                technologies=[],
+                cwe_priorities=[],
+                cvss_threshold=7.0,
+                visibility="public",
+                source_file="profiles/public/saas.yaml",
+                loaded_at=now,
+            )
+        )
+        s.add(
+            SectorProfile(
+                id="corp",
+                name="Internal",
+                sector="enterprise",
+                visibility="private",
+                source_file="profiles/private/corp.yaml",
+                loaded_at=now,
+            )
+        )
         await s.flush()
 
         # Pre-computed scores against the finance profile
         for t, score in zip(threats, [90.0, 50.0, 20.0], strict=True):
-            s.add(ThreatSectorScore(
-                threat_id=t.id, sector_id="finance",
-                score=score,
-                score_breakdown={"final_score": score},
-                calculated_at=now,
-            ))
+            s.add(
+                ThreatSectorScore(
+                    threat_id=t.id,
+                    sector_id="finance",
+                    score=score,
+                    score_breakdown={"final_score": score},
+                    calculated_at=now,
+                )
+            )
         # corp gets one score too
-        s.add(ThreatSectorScore(
-            threat_id=threats[0].id, sector_id="corp",
-            score=42.0, score_breakdown={"final_score": 42.0},
-            calculated_at=now,
-        ))
+        s.add(
+            ThreatSectorScore(
+                threat_id=threats[0].id,
+                sector_id="corp",
+                score=42.0,
+                score_breakdown={"final_score": 42.0},
+                calculated_at=now,
+            )
+        )
         await s.commit()
     return threats
 
@@ -128,18 +154,14 @@ async def test_list_sectors_visibility_all_requires_admin(client, seeded_sectors
 
 
 async def test_list_sectors_visibility_all_with_admin(client, seeded_sectors):
-    resp = await client.get(
-        "/api/v1/sectors?visibility=all", headers={"X-Admin-Key": ADMIN_KEY}
-    )
+    resp = await client.get("/api/v1/sectors?visibility=all", headers={"X-Admin-Key": ADMIN_KEY})
     assert resp.status_code == 200
     ids = sorted(p["id"] for p in resp.json()["items"])
     assert ids == ["corp", "finance", "saas"]
 
 
 async def test_list_sectors_wrong_admin_key_is_403(client, seeded_sectors):
-    resp = await client.get(
-        "/api/v1/sectors?visibility=all", headers={"X-Admin-Key": "wrong"}
-    )
+    resp = await client.get("/api/v1/sectors?visibility=all", headers={"X-Admin-Key": "wrong"})
     assert resp.status_code == 403
 
 
@@ -160,9 +182,7 @@ async def test_get_private_sector_returns_404_without_key(client, seeded_sectors
 
 
 async def test_get_private_sector_visible_to_admin(client, seeded_sectors):
-    resp = await client.get(
-        "/api/v1/sectors/corp", headers={"X-Admin-Key": ADMIN_KEY}
-    )
+    resp = await client.get("/api/v1/sectors/corp", headers={"X-Admin-Key": ADMIN_KEY})
     assert resp.status_code == 200
     assert resp.json()["id"] == "corp"
 
@@ -193,9 +213,7 @@ async def test_get_sector_threats_min_score_filter(client, seeded_sectors):
 
 async def test_get_sector_threats_since_filter(client, seeded_sectors):
     cutoff = (datetime.now(UTC) - timedelta(hours=10)).isoformat()
-    resp = await client.get(
-        "/api/v1/sectors/finance/threats", params={"since": cutoff}
-    )
+    resp = await client.get("/api/v1/sectors/finance/threats", params={"since": cutoff})
     items = resp.json()["items"]
     # Only the threat at age_h=1 and age_h=5 are within the last 10 hours
     assert len(items) == 2
@@ -258,9 +276,7 @@ async def test_admin_rescore_all_returns_202(client, app, seeded_sectors):
     from threat_intel.services.scoring_job import ThreatScoringJob
 
     app.state.scoring_job = ThreatScoringJob(app.state.session_factory)
-    resp = await client.post(
-        "/api/v1/admin/rescore-all", headers={"X-Admin-Key": ADMIN_KEY}
-    )
+    resp = await client.post("/api/v1/admin/rescore-all", headers={"X-Admin-Key": ADMIN_KEY})
     assert resp.status_code == 202
     assert resp.json()["status"] == "accepted"
 
@@ -273,9 +289,7 @@ async def test_admin_reload_profiles_returns_summary(
     from threat_intel.services.profile_loader import SectorProfileLoader
 
     app.state.profile_loader = SectorProfileLoader(factory, tmp_path)
-    resp = await client.post(
-        "/api/v1/admin/reload-profiles", headers={"X-Admin-Key": ADMIN_KEY}
-    )
+    resp = await client.post("/api/v1/admin/reload-profiles", headers={"X-Admin-Key": ADMIN_KEY})
     assert resp.status_code == 200
     body = resp.json()
     assert sorted(body["removed"]) == ["corp", "finance", "saas"]

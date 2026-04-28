@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
 from threat_intel.api.health import router as health_router
+from threat_intel.api.middleware import SecurityHeadersMiddleware
 from threat_intel.api.security import limiter
 from threat_intel.api.v1 import api_v1
 from threat_intel.collectors.nvd import NVDCollector
@@ -53,9 +54,7 @@ async def _ensure_source_row(
     url: str,
 ) -> None:
     async with factory() as s:
-        existing = (
-            await s.execute(select(Source).where(Source.name == name))
-        ).scalar_one_or_none()
+        existing = (await s.execute(select(Source).where(Source.name == name))).scalar_one_or_none()
         if existing is None:
             s.add(Source(name=name, kind=kind, url=url, enabled=True))
             await s.commit()
@@ -63,7 +62,13 @@ async def _ensure_source_row(
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
-    configure_logging(env=settings.app_env, level=settings.log_level)
+    configure_logging(
+        env=settings.app_env,
+        level=settings.log_level,
+        log_file=settings.log_file,
+        log_file_max_bytes=settings.log_file_max_bytes,
+        log_file_backup_count=settings.log_file_backup_count,
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -141,6 +146,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_methods=["GET", "POST"],
             allow_headers=["*", "X-Admin-Key"],
         )
+
+    # Added last → outermost in the Starlette stack → runs on every response
+    # path, including 4xx/5xx and CORS preflights.
+    app.add_middleware(SecurityHeadersMiddleware)
 
     @app.exception_handler(ThreatNotFoundException)
     async def _not_found(_: Request, exc: ThreatNotFoundException) -> JSONResponse:

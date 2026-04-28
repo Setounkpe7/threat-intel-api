@@ -194,9 +194,7 @@ class SectorProfileLoader:
     async def _existing_ids(session: AsyncSession, ids: list[str]) -> set[str]:
         if not ids:
             return set()
-        rows = await session.execute(
-            select(SectorProfile.id).where(SectorProfile.id.in_(ids))
-        )
+        rows = await session.execute(select(SectorProfile.id).where(SectorProfile.id.in_(ids)))
         return {r[0] for r in rows.all()}
 
     async def _remove_stale(self, kept_ids: set[str], result: LoadResult) -> None:

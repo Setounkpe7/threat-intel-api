@@ -91,10 +91,7 @@ class SectorScoringService:
         threat_cwe_ids = {c.id for c in (threat.cwes or [])}
         cwe_matches = sorted(threat_cwe_ids & set(profile.cwe_priorities))
 
-        cvss_hit = (
-            threat.cvss_score is not None
-            and threat.cvss_score >= profile.cvss_threshold
-        )
+        cvss_hit = threat.cvss_score is not None and threat.cvss_score >= profile.cvss_threshold
 
         breakdown: dict[str, Any] = {
             "technology_match": {

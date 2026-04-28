@@ -63,15 +63,11 @@ async def list_threats(
 
 
 async def get_threat_by_cve(session: AsyncSession, cve_id: str) -> Threat | None:
-    row = (
-        await session.execute(select(CVE).where(CVE.cve_id == cve_id))
-    ).scalar_one_or_none()
+    row = (await session.execute(select(CVE).where(CVE.cve_id == cve_id))).scalar_one_or_none()
     return row.threat if row else None
 
 
-async def collector_health(
-    session: AsyncSession, source_name: str
-) -> tuple[Source | None, int]:
+async def collector_health(session: AsyncSession, source_name: str) -> tuple[Source | None, int]:
     src = (
         await session.execute(select(Source).where(Source.name == source_name))
     ).scalar_one_or_none()
@@ -92,8 +88,6 @@ async def stats(session: AsyncSession) -> tuple[int, int]:
     yesterday = datetime.now(UTC) - timedelta(hours=24)
     total = (await session.execute(select(func.count(Threat.id)))).scalar_one()
     last_24h = (
-        await session.execute(
-            select(func.count(Threat.id)).where(Threat.created_at >= yesterday)
-        )
+        await session.execute(select(func.count(Threat.id)).where(Threat.created_at >= yesterday))
     ).scalar_one()
     return int(total), int(last_24h)

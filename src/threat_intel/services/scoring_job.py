@@ -41,9 +41,7 @@ class ThreatScoringJob:
         self._sf = session_factory
         self._chunk = chunk_size
 
-    async def score_threat_ids(
-        self, threat_ids: Sequence[uuid.UUID]
-    ) -> ScoringRunResult:
+    async def score_threat_ids(self, threat_ids: Sequence[uuid.UUID]) -> ScoringRunResult:
         result = ScoringRunResult()
         if not threat_ids:
             return result
@@ -72,10 +70,10 @@ class ThreatScoringJob:
     async def score_threats_since(self, since: datetime) -> ScoringRunResult:
         async with self._sf() as session:
             ids = (
-                await session.execute(
-                    select(Threat.id).where(Threat.last_modified_at >= since)
-                )
-            ).scalars().all()
+                (await session.execute(select(Threat.id).where(Threat.last_modified_at >= since)))
+                .scalars()
+                .all()
+            )
         return await self.score_threat_ids(list(ids))
 
     async def rescore_all(self) -> ScoringRunResult:
@@ -86,9 +84,7 @@ class ThreatScoringJob:
     async def _load_profiles(self, session: AsyncSession) -> list[SectorProfile]:
         return list((await session.execute(select(SectorProfile))).scalars().all())
 
-    async def _load_threats(
-        self, session: AsyncSession, ids: Sequence[uuid.UUID]
-    ) -> list[Threat]:
+    async def _load_threats(self, session: AsyncSession, ids: Sequence[uuid.UUID]) -> list[Threat]:
         if not ids:
             return []
         rows = await session.execute(
@@ -104,13 +100,17 @@ class ThreatScoringJob:
     ) -> int:
         now = datetime.now(UTC)
         existing = (
-            await session.execute(
-                select(ThreatSectorScore).where(
-                    ThreatSectorScore.threat_id == threat.id,
-                    ThreatSectorScore.sector_id.in_([p.id for p in profiles]),
+            (
+                await session.execute(
+                    select(ThreatSectorScore).where(
+                        ThreatSectorScore.threat_id == threat.id,
+                        ThreatSectorScore.sector_id.in_([p.id for p in profiles]),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         existing_by_sid = {row.sector_id: row for row in existing}
 
         written = 0

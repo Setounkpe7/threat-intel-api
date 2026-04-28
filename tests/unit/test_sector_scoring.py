@@ -253,9 +253,7 @@ def test_breakdown_is_json_serializable():
     import json
 
     t = _threat(description="Apache Tomcat issue", cwe_ids=["CWE-79"])
-    p = _profile(
-        technologies=["Tomcat"], cwe_priorities=["CWE-79"], cvss_threshold=7.0
-    )
+    p = _profile(technologies=["Tomcat"], cwe_priorities=["CWE-79"], cvss_threshold=7.0)
     r = SectorScoringService.calculate_score(t, p)
     # Should round-trip via JSON without TypeError (relevant for the JSON column).
     payload = json.dumps(r.breakdown)

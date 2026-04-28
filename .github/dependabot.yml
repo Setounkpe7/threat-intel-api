@@ -1,0 +1,72 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      python-runtime:
+        patterns:
+          - "fastapi"
+          - "uvicorn*"
+          - "pydantic*"
+          - "sqlalchemy*"
+          - "alembic"
+          - "asyncpg"
+          - "aiosqlite"
+          - "httpx*"
+          - "structlog"
+          - "tenacity"
+          - "typer"
+          - "pyyaml"
+          - "slowapi"
+          - "feedgen"
+          - "apscheduler"
+      python-dev:
+        patterns:
+          - "pytest*"
+          - "respx"
+          - "ruff"
+          - "mypy"
+          - "types-*"
+          - "bandit*"
+          - "pip-audit"
+          - "semgrep"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"

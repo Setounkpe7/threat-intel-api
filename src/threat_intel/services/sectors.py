@@ -23,9 +23,7 @@ class ScoredThreatRow:
     calculated_at: datetime
 
 
-async def list_profiles(
-    session: AsyncSession, *, include_private: bool
-) -> list[SectorProfile]:
+async def list_profiles(session: AsyncSession, *, include_private: bool) -> list[SectorProfile]:
     stmt = select(SectorProfile).order_by(SectorProfile.id)
     if not include_private:
         stmt = stmt.where(SectorProfile.visibility == "public")
@@ -84,12 +82,8 @@ async def sector_dashboard_payload(
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
 
-    top_24 = await list_scored_threats(
-        session, sector_id=sector_id, since=last_24h, limit=10
-    )
-    top_7 = await list_scored_threats(
-        session, sector_id=sector_id, since=last_7d, limit=10
-    )
+    top_24 = await list_scored_threats(session, sector_id=sector_id, since=last_24h, limit=10)
+    top_7 = await list_scored_threats(session, sector_id=sector_id, since=last_7d, limit=10)
 
     total = (
         await session.execute(
@@ -122,14 +116,18 @@ async def sector_dashboard_payload(
     ).scalar() or 0.0
 
     sources = (
-        await session.execute(
-            select(Source.name)
-            .join(Threat, Threat.source_id == Source.id)
-            .join(ThreatSectorScore, Threat.id == ThreatSectorScore.threat_id)
-            .where(ThreatSectorScore.sector_id == sector_id)
-            .distinct()
+        (
+            await session.execute(
+                select(Source.name)
+                .join(Threat, Threat.source_id == Source.id)
+                .join(ThreatSectorScore, Threat.id == ThreatSectorScore.threat_id)
+                .where(ThreatSectorScore.sector_id == sector_id)
+                .distinct()
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     stats = {
         "total_threats": int(total),
@@ -151,9 +149,7 @@ async def global_stats_payload(session: AsyncSession) -> dict[str, Any]:
         )
     ).scalar_one()
     sev_counts = (
-        await session.execute(
-            select(Threat.severity, func.count()).group_by(Threat.severity)
-        )
+        await session.execute(select(Threat.severity, func.count()).group_by(Threat.severity))
     ).all()
     by_severity = {str(s.value): int(c) for s, c in sev_counts}
     high_score_per_sector = (
@@ -166,12 +162,11 @@ async def global_stats_payload(session: AsyncSession) -> dict[str, Any]:
         )
     ).all()
     by_sector_top_score = [
-        {"sector_id": sid, "count_score_ge_70": int(c)}
-        for sid, c in high_score_per_sector
+        {"sector_id": sid, "count_score_ge_70": int(c)} for sid, c in high_score_per_sector
     ]
     sources = (
-        await session.execute(select(Source.name).where(Source.enabled.is_(True)))
-    ).scalars().all()
+        (await session.execute(select(Source.name).where(Source.enabled.is_(True)))).scalars().all()
+    )
     return {
         "total_threats": int(total),
         "last_24h": int(last_24h),

@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     app_env: Literal["dev", "prod"] = "dev"
     log_level: str = "INFO"
 
+    # Optional rotating-file sink (10 MB × 5 by default). Leave unset to keep
+    # logs on stdout only — recommended in containers where the orchestrator
+    # collects stdout.
+    log_file: Path | None = None
+    log_file_max_bytes: int = 10 * 1024 * 1024
+    log_file_backup_count: int = 5
+
     database_url: str
 
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
@@ -53,7 +60,11 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
 
     @field_validator(
-        "app_name", "app_env", "log_level", "database_url", "nvd_base_url",
+        "app_name",
+        "app_env",
+        "log_level",
+        "database_url",
+        "nvd_base_url",
         mode="before",
     )
     @classmethod

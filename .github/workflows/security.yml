@@ -1,0 +1,243 @@
+name: security
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "0.5.x"
+
+jobs:
+  # ───────────── 1. Lint ─────────────
+  lint:
+    name: ruff + mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install
+        run: uv sync --all-extras --frozen
+      - name: ruff check
+        run: uv run ruff check src tests
+      - name: ruff format check
+        run: uv run ruff format --check src tests
+      - name: mypy strict
+        run: uv run mypy src
+
+  # ───────────── 2. SAST ─────────────
+  sast:
+    name: bandit + semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install
+        run: uv sync --extra security --frozen
+      - name: Add setuptools<81 (semgrep transitively imports pkg_resources, removed in setuptools 81+)
+        run: uv pip install "setuptools<81"
+      - name: bandit
+        run: uv run bandit -r src -x src/threat_intel/cli --skip B101 -f sarif -o bandit.sarif || true
+      - name: bandit (gating run)
+        run: uv run bandit -r src -x src/threat_intel/cli --skip B101 -lll
+      - name: semgrep
+        run: uv run semgrep --config auto --error --sarif --output semgrep.sarif src
+      - name: Upload SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast-sarif
+          path: |
+            bandit.sarif
+            semgrep.sarif
+          retention-days: 14
+
+  # ───────────── 3. Secret scan ─────────────
+  secrets:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # gitleaks needs the full history
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ───────────── 4. Dependency CVE scan ─────────────
+  deps:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install pip-audit
+        run: uv tool install pip-audit
+      - name: Audit pinned runtime deps
+        # Strict mode → any vuln in requirements.lock fails the job. The
+        # local Makefile equivalent only flags HIGH/CRITICAL; CI is stricter
+        # so we surface MEDIUM early and triage in PR.
+        run: |
+          uv tool run pip-audit \
+            --requirement requirements.lock \
+            --strict \
+            --vulnerability-service osv \
+            --format json \
+            --output pip-audit.json
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit
+          path: pip-audit.json
+          retention-days: 14
+
+  # ───────────── 5. Tests + coverage ─────────────
+  test:
+    name: pytest (cov >= 80%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install
+        run: uv sync --all-extras --frozen
+      - name: Run test suite
+        env:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          APP_ENV: dev
+          CORS_ORIGINS: ""
+        run: |
+          uv run pytest \
+            --cov=src/threat_intel \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=80
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          retention-days: 14
+
+  # ───────────── 6. Build the image ─────────────
+  docker-build:
+    name: docker build + hadolint
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.image-tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Compute tag
+        id: meta
+        run: echo "image-tag=threat-intel-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+      - name: Build (load locally for the next job)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ steps.meta.outputs.image-tag }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+            VERSION=ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Save image
+        run: docker save ${{ steps.meta.outputs.image-tag }} -o image.tar
+      - name: Upload image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: image.tar
+          retention-days: 1
+
+  # ───────────── 7. Container vulnerability scan ─────────────
+  container-scan:
+    name: trivy image scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download image artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+      - name: Load image
+        run: docker load -i image.tar
+      - name: Trivy — fail on CRITICAL
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.docker-build.outputs.image-tag }}
+          exit-code: "1"
+          severity: CRITICAL
+          ignore-unfixed: true
+          vuln-type: os,library
+          format: table
+      - name: Trivy — full SARIF (CRITICAL + HIGH, non-blocking)
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.docker-build.outputs.image-tag }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy.sarif
+      - name: Upload SARIF to code-scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-image
+
+  # ───────────── 8. Aggregate gate ─────────────
+  security-gate:
+    name: security gate
+    if: always()
+    needs: [lint, sast, secrets, deps, test, docker-build, container-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job failed or was skipped
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          echo "$RESULTS" | python -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          bad = [name for name, info in data.items() if info.get('result') not in ('success',)]
+          if bad:
+              print(f'❌ failing/skipped jobs: {bad}')
+              sys.exit(1)
+          print('✅ all security checks passed')
+          "
