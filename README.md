@@ -157,6 +157,18 @@ ruff format src tests
 mypy src             # static types
 ```
 
+### Pre-commit hooks
+
+Every commit runs lint, type check, SAST (bandit), and a secret scan (gitleaks). Install once after cloning:
+
+```bash
+pip install pre-commit            # or: pipx install pre-commit
+pre-commit install                # registers .git/hooks/pre-commit
+pre-commit run --all-files        # one-off run on the whole tree
+```
+
+The configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Hooks: ruff (lint + format), mypy strict, bandit, gitleaks, plus the standard whitespace / private-key / large-file guards.
+
 ## Deliberately out of scope for M2
 
 NLP entity extraction (M3), alerting webhooks (M4), STIX/TAXII export (M5), public dashboard frontend (M6), additional collectors — RSS / GitHub Advisories / OTX (later). The data model and collector interface are designed so each of those lands without breaking what's here.
