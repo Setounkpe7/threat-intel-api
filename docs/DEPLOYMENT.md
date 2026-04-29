@@ -205,8 +205,11 @@ In the Railway UI:
    - Pre-Deploy Command: `alembic upgrade head`
    - Healthcheck Path: `/livez`
    - Replicas: 1
-5. **Settings → Networking:** click *Generate Domain*. Railway returns
-   `<service>-production.up.railway.app` with a Let's Encrypt cert.
+5. **Settings → Networking:** click *Generate Domain*. Railway asks
+   which container port the app listens on — answer **`8000`** (matches
+   `EXPOSE 8000` in the Dockerfile and `--port 8000` in the CMD).
+   Railway returns `<service>-production.up.railway.app` with a Let's
+   Encrypt cert.
 6. **Sentry:** create a project for `threat-intel-api` (Python /
    FastAPI), copy the DSN into the `SENTRY_DSN` variable above.
 7. **Trigger the first deploy.** Settings → *Deploy Now* (or push an
