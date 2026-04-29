@@ -1,8 +1,9 @@
 name: security
 
 on:
-  push:
-    branches: [main, dev]
+  # Both main and dev are protected — only PRs land there, so the pull_request
+  # trigger below is sufficient. No push triggers to avoid double-runs on every
+  # merge commit (cf. earlier push:main removal in 94761cb).
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
