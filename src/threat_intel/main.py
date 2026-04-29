@@ -39,6 +39,32 @@ from threat_intel.services.scoring_job import ThreatScoringJob, daily_recent_win
 logger = structlog.get_logger(__name__)
 
 
+def _init_sentry(settings: Settings) -> None:
+    """Initialize Sentry if SENTRY_DSN is set; no-op otherwise.
+
+    Errors-only configuration: traces_sample_rate=0.0, no profiling, no PII.
+    Release tag uses the package __version__ so Sentry can group issues by
+    app version.
+    """
+    if not settings.sentry_dsn:
+        return
+
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+
+    from threat_intel import __version__
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        release=__version__,
+        send_default_pii=False,
+        traces_sample_rate=0.0,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+    )
+
+
 def _problem(status: int, title: str, detail: str, type_: str = "about:blank") -> JSONResponse:
     return JSONResponse(
         status_code=status,
@@ -69,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log_file_max_bytes=settings.log_file_max_bytes,
         log_file_backup_count=settings.log_file_backup_count,
     )
+    _init_sentry(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
