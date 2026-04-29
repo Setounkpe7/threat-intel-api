@@ -163,7 +163,7 @@ jobs:
         id: meta
         run: echo "image-tag=threat-intel-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
       - name: Build (load locally for the next job)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
