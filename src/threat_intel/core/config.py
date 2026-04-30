@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     nvd_api_key: str | None = None
     nvd_fetch_interval_minutes: int = 60
 
+    # GitHub Security Advisories collector. Optional — leave unset to disable.
+    # Generate at https://github.com/settings/tokens — no scope required.
+    github_token: str | None = None
+    github_advisories_fetch_interval_minutes: int = 120
+    cisa_kev_fetch_interval_minutes: int = 360
+
     profiles_path: Path = Path("profiles")
 
     # Admin API key required for /api/v1/admin/* and ?visibility=all.
@@ -59,12 +65,17 @@ class Settings(BaseSettings):
     rate_limit_default: str = "100/minute"
     rate_limit_enabled: bool = True
 
+    # Sentry error tracking. Leave SENTRY_DSN blank to disable.
+    sentry_dsn: str | None = None
+    sentry_environment: str = "prod"
+
     @field_validator(
         "app_name",
         "app_env",
         "log_level",
         "database_url",
         "nvd_base_url",
+        "sentry_environment",
         mode="before",
     )
     @classmethod
@@ -73,12 +84,26 @@ class Settings(BaseSettings):
             return _strip_inline_comment(v)
         return v
 
-    @field_validator("nvd_api_key", "admin_api_key", mode="before")
+    @field_validator("nvd_api_key", "admin_api_key", "sentry_dsn", "github_token", mode="before")
     @classmethod
     def _strip_optional_string(cls, v: object) -> object:
         if isinstance(v, str):
             cleaned = _strip_inline_comment(v)
             return cleaned or None
+        return v
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _normalize_postgres_scheme(cls, v: str) -> str:
+        """Rewrite synchronous 'postgresql://' to 'postgresql+asyncpg://'.
+
+        Railway's managed Postgres exposes DATABASE_URL with the synchronous
+        scheme by default. The runtime uses asyncpg and requires the
+        '+asyncpg' driver suffix. Other schemes (sqlite+aiosqlite,
+        postgresql+psycopg, postgresql+asyncpg) are left untouched.
+        """
+        if v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v.removeprefix("postgresql://")
         return v
 
     @field_validator("cors_origins", mode="before")

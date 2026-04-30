@@ -10,6 +10,7 @@ from threat_intel.collectors.base import RawEvent
 from threat_intel.collectors.nvd import NVDCollector
 from threat_intel.core.config import Settings
 from threat_intel.models.base import Severity
+from threat_intel.schemas.ingest import CollectedEvent
 
 FIXTURE = json.loads(Path("tests/fixtures/nvd_sample.json").read_text())
 
@@ -26,19 +27,21 @@ def test_normalize_full_record():
         payload=item,
         fetched_at=datetime.now(UTC),
     )
-    draft = _make_collector().normalize(raw)
+    event = _make_collector().to_event(raw)
 
-    assert draft.source_name == "nvd"
-    assert draft.external_id == "CVE-2026-0001"
-    assert draft.severity is Severity.critical
-    assert draft.cvss_score == 9.8
-    assert draft.cvss_version == "3.1"
-    assert draft.cvss_vector.startswith("CVSS:3.1/")
-    assert draft.cwe_ids == ["CWE-79"]
-    assert draft.affected_products == ["cpe:2.3:a:example:product:1.0:*:*:*:*:*:*:*"]
-    assert draft.references == ["https://example.test/advisory/1"]
-    assert draft.published_at.tzinfo is not None
-    assert draft.title.startswith("Remote code execution")
+    assert isinstance(event, CollectedEvent)
+    assert event.source_name == "nvd"
+    assert event.external_id == "CVE-2026-0001"
+    assert event.severity is Severity.critical
+    assert event.cvss_score == 9.8
+    assert event.cvss_version == "3.1"
+    assert event.cvss_vector.startswith("CVSS:3.1/")
+    assert event.cwe_ids == ["CWE-79"]
+    # affected_products now lives in raw_data and indicators
+    assert event.raw_data["affected_products"] == ["cpe:2.3:a:example:product:1.0:*:*:*:*:*:*:*"]
+    assert event.raw_data["references"] == ["https://example.test/advisory/1"]
+    assert event.published_at.tzinfo is not None
+    assert event.title.startswith("Remote code execution")
 
 
 def test_normalize_minimal_record_falls_back_to_unknown():
@@ -48,21 +51,21 @@ def test_normalize_minimal_record_falls_back_to_unknown():
         payload=item,
         fetched_at=datetime.now(UTC),
     )
-    draft = _make_collector().normalize(raw)
+    event = _make_collector().to_event(raw)
 
-    assert draft.severity is Severity.unknown
-    assert draft.cvss_score is None
-    assert draft.cwe_ids == []
-    assert draft.affected_products == []
-    assert draft.references == []
+    assert event.severity is Severity.unknown
+    assert event.cvss_score is None
+    assert event.cwe_ids == []
+    assert event.raw_data["affected_products"] == []
+    assert event.raw_data["references"] == []
 
 
 def test_normalize_picks_english_description():
     item = FIXTURE["vulnerabilities"][0]
     raw = RawEvent(external_id=item["cve"]["id"], payload=item, fetched_at=datetime.now(UTC))
-    draft = _make_collector().normalize(raw)
-    assert "código" not in draft.description.lower()
-    assert "ExampleProduct" in draft.description
+    event = _make_collector().to_event(raw)
+    assert "código" not in event.summary.lower()
+    assert "ExampleProduct" in event.summary
 
 
 @pytest.mark.asyncio

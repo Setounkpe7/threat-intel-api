@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ project_title }} — bulletin</title>
+  <meta name="description" content="A standing record of known software vulnerabilities, queryable by sector." />
+  <meta name="robots" content="index,follow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #f3ede0;
+      --ink: #161714;
+      --ink-soft: #4a463f;
+      --rule: #c8c0ad;
+      --accent: #9d3a25;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      line-height: 1.65;
+      font-feature-settings: "liga", "onum";
+      -webkit-font-smoothing: antialiased;
+    }
+    main { max-width: 920px; margin: 0 auto; padding: 56px 28px 96px; }
+
+    .masthead {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 18px;
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 18px;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .masthead .vol { color: var(--ink); }
+    .live { display: inline-flex; align-items: center; gap: 8px; }
+    .live::before {
+      content: ""; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); display: inline-block;
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 60% { opacity: 1; }
+      80%, 100% { opacity: 0.25; }
+    }
+
+    h1 {
+      font-size: 56px; line-height: 1.05; letter-spacing: -0.015em;
+      font-weight: 500; margin: 56px 0 8px;
+    }
+    h1 em { font-style: italic; color: var(--ink-soft); font-weight: 400; }
+
+    .lede {
+      font-size: 22px; line-height: 1.45; max-width: 38em;
+      color: var(--ink-soft); margin: 0 0 56px;
+    }
+    .lede::first-letter {
+      font-size: 76px; float: left;
+      line-height: 0.9; padding: 6px 10px 0 0; font-weight: 500;
+      color: var(--ink);
+    }
+
+    section { margin-top: 56px; }
+    .section-h {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;
+      color: var(--ink-soft); margin-bottom: 14px;
+      border-top: 1px solid var(--rule); padding-top: 12px;
+    }
+
+    .ledger { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+    .ledger > div { padding: 14px 18px 18px; border-left: 1px solid var(--rule); }
+    .ledger > div:first-child { border-left: 0; padding-left: 0; }
+    .ledger .num {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 38px; line-height: 1; font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    .ledger .num.accent { color: var(--accent); }
+    .ledger .label {
+      margin-top: 8px; font-style: italic; font-size: 14px;
+      color: var(--ink-soft);
+    }
+
+    .severity-row {
+      display: grid; grid-template-columns: 110px 1fr 64px;
+      align-items: center; gap: 14px; padding: 8px 0;
+      border-bottom: 1px dashed var(--rule);
+    }
+    .severity-row:last-child { border-bottom: 0; }
+    .severity-row .name { font-style: italic; }
+    .bar { height: 4px; background: var(--ink); opacity: 0.85; min-width: 1px; }
+    .bar.crit { background: var(--accent); opacity: 1; }
+    .severity-row .count {
+      text-align: right;
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px; color: var(--ink-soft);
+    }
+
+    ol.endpoints { list-style: none; margin: 0; padding: 0; counter-reset: ep; }
+    ol.endpoints li {
+      counter-increment: ep;
+      display: grid; grid-template-columns: 38px 1fr;
+      padding: 14px 0; border-bottom: 1px solid var(--rule);
+    }
+    ol.endpoints li:last-child { border-bottom: 0; }
+    ol.endpoints li::before {
+      content: counter(ep, decimal-leading-zero);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; color: var(--ink-soft); padding-top: 4px;
+    }
+    .ep-path {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 14px;
+    }
+    .ep-method { color: var(--ink-soft); }
+    .ep-desc { font-style: italic; color: var(--ink-soft); margin-top: 4px; font-size: 16px; }
+
+    .sectors {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px; line-height: 2;
+    }
+    .sectors a {
+      color: var(--ink); text-decoration: underline;
+      text-underline-offset: 4px; text-decoration-color: var(--rule);
+    }
+    .sectors a:hover { text-decoration-color: var(--accent); color: var(--accent); }
+    .sectors .empty { color: var(--ink-soft); font-style: italic; }
+
+    .colophon {
+      margin-top: 72px; padding-top: 24px;
+      border-top: 1px solid var(--ink);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--ink-soft);
+      display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between;
+    }
+    .colophon a { color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+    .colophon a:hover { color: var(--accent); }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 40px; }
+      .lede { font-size: 19px; }
+      .ledger { grid-template-columns: repeat(2, 1fr); }
+      .ledger > div { border-left: 0; border-top: 1px solid var(--rule); padding: 18px 0 0; }
+      .ledger > div:nth-child(-n+2) { border-top: 0; padding-top: 0; }
+      .ledger > div:nth-child(even) { border-left: 1px solid var(--rule); padding-left: 18px; }
+      .severity-row { grid-template-columns: 90px 1fr 50px; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <span class="vol">{{ project_title }} · v{{ version }}</span>
+      <span class="live" aria-label="last source synchronization">live sync · {{ last_sync_label }}</span>
+    </header>
+
+    <h1>A standing record<br /><em>of software vulnerabilities,</em><br />queryable by sector.</h1>
+
+    <p class="lede">{{ lede }}</p>
+
+    <section aria-labelledby="ledger-h">
+      <div class="section-h" id="ledger-h">Ledger</div>
+      <div class="ledger">
+        <div><div class="num">{{ total_threats }}</div><div class="label">threats indexed</div></div>
+        <div><div class="num">{{ last_24h }}</div><div class="label">in the last 24 hours</div></div>
+        <div><div class="num accent">{{ critical_count }}</div><div class="label">rated critical</div></div>
+        <div><div class="num">{{ sources_active }}</div><div class="label">active source{% if sources_active != 1 %}s{% endif %}</div></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="severity-h">
+      <div class="section-h" id="severity-h">Severity distribution</div>
+      {% if severity_rows %}
+        {% for row in severity_rows %}
+        <div class="severity-row">
+          <div class="name">{{ row.label }}</div>
+          <div class="bar{% if row.is_critical %} crit{% endif %}" style="width: {{ row.width_pct }}%"></div>
+          <div class="count">{{ row.count }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="severity-row"><div class="name" style="grid-column: 1 / -1; color: var(--ink-soft); font-style: italic;">No threats indexed yet — collectors are warming up.</div></div>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="endpoints-h">
+      <div class="section-h" id="endpoints-h">Endpoints</div>
+      <ol class="endpoints">
+        {% for ep in endpoints %}
+        <li>
+          <div>
+            <div class="ep-path"><span class="ep-method">GET</span> {{ ep.path }}</div>
+            <div class="ep-desc">{{ ep.description }}</div>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section aria-labelledby="sectors-h">
+      <div class="section-h" id="sectors-h">Sectors</div>
+      <div class="sectors">
+        {%- if sectors -%}
+          {%- for s in sectors -%}<a href="/api/v1/sectors/{{ s.id }}/dashboard">{{ s.id }}</a>{% if not loop.last %} · {% endif %}{%- endfor -%}
+        {%- else -%}
+          <span class="empty">No public sector profiles loaded.</span>
+        {%- endif -%}
+      </div>
+    </section>
+
+    <footer class="colophon">
+      <span>v{{ version }} · {{ environment }}</span>
+      <span><a href="/docs">interactive docs →</a></span>
+      <span><a href="https://github.com/Setounkpe7/threat-intel-api">source · github</a></span>
+    </footer>
+  </main>
+</body>
+</html>

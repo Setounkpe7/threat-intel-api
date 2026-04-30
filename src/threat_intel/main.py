@@ -14,10 +14,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
+from threat_intel.api.docs import router as docs_router
 from threat_intel.api.health import router as health_router
 from threat_intel.api.middleware import SecurityHeadersMiddleware
 from threat_intel.api.security import limiter
 from threat_intel.api.v1 import api_v1
+from threat_intel.collectors.cisa_kev import CISAKEVCollector
+from threat_intel.collectors.github_advisories import GitHubAdvisoriesCollector
 from threat_intel.collectors.nvd import NVDCollector
 from threat_intel.core.config import Settings, get_settings
 from threat_intel.core.db import build_engine, session_factory
@@ -37,6 +40,32 @@ from threat_intel.services.profile_loader import SectorProfileLoader
 from threat_intel.services.scoring_job import ThreatScoringJob, daily_recent_window
 
 logger = structlog.get_logger(__name__)
+
+
+def _init_sentry(settings: Settings) -> None:
+    """Initialize Sentry if SENTRY_DSN is set; no-op otherwise.
+
+    Errors-only configuration: traces_sample_rate=0.0, no profiling, no PII.
+    Release tag uses the package __version__ so Sentry can group issues by
+    app version.
+    """
+    if not settings.sentry_dsn:
+        return
+
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+
+    from threat_intel import __version__
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        release=__version__,
+        send_default_pii=False,
+        traces_sample_rate=0.0,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+    )
 
 
 def _problem(status: int, title: str, detail: str, type_: str = "about:blank") -> JSONResponse:
@@ -69,6 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log_file_max_bytes=settings.log_file_max_bytes,
         log_file_backup_count=settings.log_file_backup_count,
     )
+    _init_sentry(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -76,12 +106,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         factory = session_factory(engine)
         http = httpx.AsyncClient(timeout=30.0)
         nvd = NVDCollector(http_client=http, settings=settings)
+        kev = CISAKEVCollector(http_client=http, settings=settings)
+        ghsa = GitHubAdvisoriesCollector(http_client=http, settings=settings)
+        collectors = [nvd, kev, ghsa]
         scoring_job = ThreatScoringJob(session_factory=factory)
         ingestion = IngestionService(
-            session_factory=factory, collectors=[nvd], scoring_job=scoring_job
+            session_factory=factory, collectors=collectors, scoring_job=scoring_job
         )
 
         await _ensure_source_row(factory, "nvd", SourceKind.cve_feed, settings.nvd_base_url)
+        await _ensure_source_row(
+            factory,
+            "cisa_kev",
+            SourceKind.cve_feed,
+            "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        )
+        await _ensure_source_row(
+            factory, "github_advisories", SourceKind.advisory, "https://api.github.com/graphql"
+        )
+
+        # Sync Source.enabled in DB for any disabled collectors
+        async with factory() as session:
+            for c in collectors:
+                if not c.enabled:
+                    src = (
+                        await session.execute(select(Source).where(Source.name == c.source_name))
+                    ).scalar_one_or_none()
+                    if src and src.enabled:
+                        src.enabled = False
+                        logger.info("collector.disabled_at_startup", source=c.source_name)
+            await session.commit()
 
         profile_loader = SectorProfileLoader(
             session_factory=factory, profiles_root=settings.profiles_path
@@ -96,19 +150,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             errors=len(load_result.errors),
         )
 
-        async def run_nvd() -> None:
-            try:
-                await ingestion.run("nvd")
-            except Exception:  # noqa: BLE001
-                logger.exception("scheduled_nvd_run_failed")
-
         async def run_daily_rescore() -> None:
             try:
                 await scoring_job.score_threats_since(daily_recent_window())
             except Exception:  # noqa: BLE001
                 logger.exception("scheduled_rescore_failed")
 
-        scheduler = build_scheduler(settings, run_nvd, run_daily_rescore)
+        scheduler = build_scheduler(
+            settings,
+            ingestion=ingestion,
+            session_factory=factory,
+            daily_rescore_runner=run_daily_rescore,
+        )
         scheduler.start()
 
         app.state.settings = settings
@@ -116,7 +169,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.ingestion = ingestion
         app.state.profile_loader = profile_loader
         app.state.scoring_job = scoring_job
-        app.state.collector_names = ["nvd"]
+        app.state.collector_names = [c.source_name for c in collectors]
         app.state.start_time = datetime.now(UTC)
 
         try:
@@ -130,6 +183,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="CyberThreat Intelligence API",
         version="0.2.0",
         lifespan=lifespan,
+        # /docs is served by `docs_router` with a per-request CSP nonce.
+        docs_url=None,
     )
 
     app.state.settings = settings  # also exposed by lifespan but available at startup
@@ -171,6 +226,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def _generic(_: Request, exc: ThreatIntelException) -> JSONResponse:
         return _problem(HTTP_500_INTERNAL_SERVER_ERROR, "Internal error", str(exc))
 
+    app.include_router(docs_router)
     app.include_router(health_router)
     app.include_router(api_v1)
 
