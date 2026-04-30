@@ -129,7 +129,7 @@ def _migrate_data(bind: sa.engine.Connection) -> None:
             "current_interval_minutes, consecutive_failures, created_at, updated_at) "
             "VALUES ('cisa_kev', 'cve_feed', "
             "'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', "
-            "1, 360, 360, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
+            "TRUE, 360, 360, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
             "ON CONFLICT (name) DO NOTHING"
         )
     )
@@ -139,7 +139,7 @@ def _migrate_data(bind: sa.engine.Connection) -> None:
             "current_interval_minutes, consecutive_failures, created_at, updated_at) "
             "VALUES ('github_advisories', 'advisory', "
             "'https://api.github.com/graphql', "
-            "1, 120, 120, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
+            "TRUE, 120, 120, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
             "ON CONFLICT (name) DO NOTHING"
         )
     )
