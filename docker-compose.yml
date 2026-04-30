@@ -15,9 +15,21 @@ services:
     ports:
       - "5432:5432"
 
+  migrate:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://threat:threat@db:5432/threat_intel
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
   app:
     build: .
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
     env_file: .env

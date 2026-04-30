@@ -19,3 +19,21 @@ def test_settings_cors_empty_string_yields_empty_list(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", "")
     s = Settings()
     assert s.cors_origins == []
+
+
+def test_github_token_optional_default_none(monkeypatch):
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    settings = Settings()
+    assert settings.github_token is None
+
+
+def test_github_token_loaded_from_env(monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_test_abc")
+    settings = Settings()
+    assert settings.github_token == "ghp_test_abc"
+
+
+def test_github_token_strips_inline_comment(monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_test_abc # personal token")
+    settings = Settings()
+    assert settings.github_token == "ghp_test_abc"

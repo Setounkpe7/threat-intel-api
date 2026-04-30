@@ -19,8 +19,8 @@ from threat_intel.schemas.sector import (
     SectorProfileRead,
     SectorProfileSummary,
 )
-from threat_intel.schemas.threat import ThreatRead
 from threat_intel.services import sectors as sector_svc
+from threat_intel.services.threats import _to_read
 
 router = APIRouter(prefix="/sectors", tags=["sectors"])
 
@@ -82,7 +82,7 @@ async def get_sector_threats(
     )
     items = [
         ScoredThreatRead(
-            **ThreatRead.model_validate(r.threat).model_dump(),
+            **_to_read(r.threat).model_dump(),
             score=r.score,
             score_breakdown=r.score_breakdown,
             calculated_at=r.calculated_at,
@@ -108,7 +108,7 @@ async def get_sector_dashboard(
     def _to_scored(rows: list[Any]) -> list[ScoredThreatRead]:
         return [
             ScoredThreatRead(
-                **ThreatRead.model_validate(r.threat).model_dump(),
+                **_to_read(r.threat).model_dump(),
                 score=r.score,
                 score_breakdown=r.score_breakdown,
                 calculated_at=r.calculated_at,
@@ -154,11 +154,13 @@ async def get_sector_feed(
 
     for r in rows:
         fe = fg.add_entry()
-        fe.id(f"{base}/api/v1/cve/{r.threat.external_id}")
+        tr = _to_read(r.threat)
+        ext_id = tr.external_id or r.threat.title
+        fe.id(f"{base}/api/v1/cve/{ext_id}")
         fe.title(f"[score={r.score:.0f}] {r.threat.title}")
-        fe.link(href=f"{base}/api/v1/cve/{r.threat.external_id}")
+        fe.link(href=f"{base}/api/v1/cve/{ext_id}")
         fe.published(r.threat.published_at)
-        fe.description(r.threat.description[:500])
+        fe.description((tr.description or r.threat.summary or "")[:500])
 
     rss_bytes = fg.rss_str(pretty=True)
     return Response(content=rss_bytes, media_type="application/rss+xml")

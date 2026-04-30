@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 
 import structlog
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,3 +58,27 @@ async def health(
         collectors=collectors_state,
         stats=Stats(total_threats=total, threats_last_24h=last_24h),
     )
+
+
+@router.get("/livez", include_in_schema=False)
+async def livez() -> dict[str, str]:
+    """Liveness probe: process is alive. No external dependency.
+
+    Used by Railway's healthcheck. Must remain trivially fast and must
+    not depend on DB / network — a slow DB should not cascade into a
+    pod restart loop.
+    """
+    return {"status": "ok"}
+
+
+@router.get("/readyz", include_in_schema=False)
+async def readyz(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> JSONResponse:
+    """Readiness probe: app can serve traffic (DB reachable)."""
+    try:
+        await session.execute(text("SELECT 1"))
+    except Exception:
+        logger.warning("readyz_db_unreachable")
+        return JSONResponse({"status": "not_ready"}, status_code=503)
+    return JSONResponse({"status": "ready"}, status_code=200)
