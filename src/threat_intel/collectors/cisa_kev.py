@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import ClassVar, Literal
 
+from threat_intel.collectors._sanitize import clean_text
 from threat_intel.collectors.base import APIRestCollector, RawEvent
 from threat_intel.core.exceptions import CollectorParseError
 from threat_intel.models.base import SourceKind
@@ -36,8 +37,8 @@ class CISAKEVCollector(APIRestCollector):
         try:
             v = raw.payload
             cve_id = v["cveID"]
-            title = v.get("vulnerabilityName") or cve_id
-            summary = v.get("shortDescription") or ""
+            title = clean_text(v.get("vulnerabilityName")) or cve_id
+            summary = clean_text(v.get("shortDescription") or "")
 
             tags = ["kev", "actively-exploited"]
             if (v.get("knownRansomwareCampaignUse") or "").lower() == "known":

@@ -1,18 +1,14 @@
-import re
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
-import bleach
-
+from threat_intel.collectors._sanitize import clean_text
 from threat_intel.collectors.base import APIGraphQLCollector, RawEvent
 from threat_intel.core.exceptions import CollectorParseError
 from threat_intel.models.base import Severity, SourceKind
 from threat_intel.schemas.ingest import CollectedEvent, CollectedIndicator
 
 GHSA_ENDPOINT = "https://api.github.com/graphql"
-
-_SCRIPT_RE = re.compile(r"<script[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL)
 
 _SEVERITY_MAP = {
     "CRITICAL": Severity.critical,
@@ -50,13 +46,6 @@ query SecurityAdvisories($since: DateTime!, $cursor: String) {
   }
 }
 """
-
-
-def _clean(value: str | None) -> str:
-    if not value:
-        return ""
-    value = _SCRIPT_RE.sub("", value)
-    return bleach.clean(value, tags=[], strip=True)
 
 
 def _parse_dt(value: str) -> datetime:
@@ -132,8 +121,8 @@ class GitHubAdvisoriesCollector(APIGraphQLCollector):
             return CollectedEvent(
                 source_name=self.source_name,
                 external_id=ghsa_id,
-                title=_clean(n.get("summary")),
-                summary=_clean(n.get("description")),
+                title=clean_text(n.get("summary")),
+                summary=clean_text(n.get("description")),
                 severity=severity,
                 cwe_ids=cwe_ids,
                 tags=tags,
@@ -141,8 +130,8 @@ class GitHubAdvisoriesCollector(APIGraphQLCollector):
                 published_at=_parse_dt(n["publishedAt"]),
                 last_modified_at=_parse_dt(n["updatedAt"]),
                 raw_data={
-                    "title": _clean(n.get("summary")),
-                    "summary": _clean(n.get("description")),
+                    "title": clean_text(n.get("summary")),
+                    "summary": clean_text(n.get("description")),
                     "severity": severity.value if severity else None,
                     "cwe_ids": cwe_ids,
                     "references": references,

@@ -41,6 +41,14 @@ _PRIORITY_ORDER = ("nvd", "github_advisories", "cisa_kev")
 
 For each field (CVSS, severity, title, summary), the first source in the list that has a non-empty value wins. Tags and Common Weakness Enumeration (CWE) identifiers are unioned across all sources. Severity is then bumped to `critical` if the union of tags contains `kev` (KEV-listed vulnerabilities are critical by definition, since active exploitation is confirmed).
 
+## Concurrency model
+
+`IngestService.process()` runs the dedup lookup and the create/upsert sequence inside a single session/transaction. This is **single-task safe** — within one coroutine, no race can produce a duplicate Threat.
+
+When two collectors processing the same CVE-ID land in the same scheduler tick (e.g. NVD and KEV both ingesting `CVE-2024-X`), both coroutines may pass the dedup lookup with zero matches and both may try to create the Threat. The `UNIQUE` constraint on `threat_indicators(threat_id, indicator_type, value)` fails one of the two transactions; the failure is captured in `IngestionService` as an event-level error and counted in `CollectorRun.events_failed`. The next ingestion of the same CVE-ID will dedup correctly against the surviving Threat.
+
+This is acceptable for the platform's once-per-tick cadence. Stronger guarantees (advisory locks per CVE-ID, or `SERIALIZABLE` transactions) are out of scope for M3a.
+
 ## Checklist for adding a new collector
 
 1. **Pick a base class** — REST/JSON → `APIRestCollector`, GraphQL → `APIGraphQLCollector`.

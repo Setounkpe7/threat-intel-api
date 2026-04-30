@@ -80,6 +80,26 @@ class IngestService:
     async def process(
         self, event: CollectedEvent, source_id: int
     ) -> tuple[Literal["created", "updated"], uuid.UUID]:
+        """Ingest one CollectedEvent — dedup, upsert, recompute canonical fields.
+
+        Single-task safe: the entire sequence (lookup → create/upsert → recompute)
+        runs inside one session/transaction, so within a single coroutine no
+        TOCTOU race can produce duplicate Threats.
+
+        Multi-task safety: NOT guaranteed. If two collectors process the same CVE
+        in parallel coroutines (e.g. NVD and KEV both ingesting CVE-2024-X in the
+        same scheduler tick), both may pass the dedup lookup with 0 matches and
+        both may create a Threat. On Postgres the UNIQUE constraint on
+        threat_indicators(threat_id, indicator_type, value) will fail one of the
+        two transactions and the IngestionService event-level except block will
+        record it as events_failed. On SQLite (tests) the constraint behaves the
+        same way at INSERT time. The merge_candidate path then handles future
+        ingestions of the same CVE.
+
+        Acceptable for M3a given the once-per-tick cadence and small per-collector
+        fan-out. A stronger guarantee (advisory locks per CVE-ID, or a
+        SERIALIZABLE transaction) is M3b/M4 work.
+        """
         async with self._sf() as session:
             matches = await _lookup_threat_ids_by_indicators(session, event.indicators)
 

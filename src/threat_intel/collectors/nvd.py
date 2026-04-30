@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any, ClassVar, Literal
 
+from threat_intel.collectors._sanitize import clean_text
 from threat_intel.collectors.base import APIRestCollector, RawEvent
 from threat_intel.core.exceptions import CollectorParseError
 from threat_intel.models.base import Severity, SourceKind
@@ -42,7 +43,7 @@ class NVDCollector(APIRestCollector):
             cve_id: str = cve["id"]
             descriptions = cve.get("descriptions") or []
             en = next((d["value"] for d in descriptions if d.get("lang") == "en"), "")
-            description = en or (descriptions[0]["value"] if descriptions else "")
+            description = clean_text(en or (descriptions[0]["value"] if descriptions else ""))
             title = description[:150] if description else cve_id
 
             metrics = cve.get("metrics") or {}
