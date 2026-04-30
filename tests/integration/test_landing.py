@@ -66,22 +66,20 @@ async def seeded_landing(factory):
             [Severity.critical, Severity.critical, Severity.high, Severity.medium, Severity.low]
         ):
             tid = uuid.uuid4()
+            pub_at = now - timedelta(hours=i)
             s.add(
                 Threat(
                     id=tid,
-                    source_id=src.id,
-                    external_id=f"CVE-2026-{2000 + i}",
+                    threat_type="cve",
                     title=f"Threat {i}",
-                    description=f"desc {i}",
+                    summary=f"desc {i}",
                     severity=sev,
                     cvss_score=8.0 if sev != Severity.low else 3.0,
                     cvss_vector="CVSS:3.1/AV:N",
                     cvss_version="3.1",
-                    affected_products=[],
-                    references=[],
-                    published_at=now - timedelta(hours=i),
-                    last_modified_at=now - timedelta(hours=i),
-                    raw_data={},
+                    tags=[],
+                    published_at=pub_at,
+                    last_modified_at=pub_at,
                 )
             )
         await s.commit()

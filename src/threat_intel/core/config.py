@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     nvd_api_key: str | None = None
     nvd_fetch_interval_minutes: int = 60
 
+    # GitHub Security Advisories collector. Optional — leave unset to disable.
+    # Generate at https://github.com/settings/tokens — no scope required.
+    github_token: str | None = None
+    github_advisories_fetch_interval_minutes: int = 120
+    cisa_kev_fetch_interval_minutes: int = 360
+
     profiles_path: Path = Path("profiles")
 
     # Admin API key required for /api/v1/admin/* and ?visibility=all.
@@ -78,7 +84,7 @@ class Settings(BaseSettings):
             return _strip_inline_comment(v)
         return v
 
-    @field_validator("nvd_api_key", "admin_api_key", "sentry_dsn", mode="before")
+    @field_validator("nvd_api_key", "admin_api_key", "sentry_dsn", "github_token", mode="before")
     @classmethod
     def _strip_optional_string(cls, v: object) -> object:
         if isinstance(v, str):

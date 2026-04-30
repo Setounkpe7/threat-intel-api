@@ -1,0 +1,30 @@
+{
+  "data": {
+    "securityAdvisories": {
+      "pageInfo": {"hasNextPage": true, "endCursor": "Y3Vyc29yOnYyOpHOA"},
+      "nodes": [
+        {
+          "ghsaId": "GHSA-jfh8-c2jp-5v3q",
+          "summary": "RCE in Apache Log4j",
+          "description": "Log4j 2.x JNDI lookup feature allows remote attackers to execute arbitrary code.",
+          "severity": "CRITICAL",
+          "publishedAt": "2021-12-10T00:00:00Z",
+          "updatedAt": "2022-01-15T12:00:00Z",
+          "identifiers": [
+            {"type": "GHSA", "value": "GHSA-jfh8-c2jp-5v3q"},
+            {"type": "CVE", "value": "CVE-2021-44228"}
+          ],
+          "vulnerabilities": {
+            "nodes": [
+              {"package": {"ecosystem": "MAVEN", "name": "org.apache.logging.log4j:log4j-core"}, "vulnerableVersionRange": ">= 2.0, < 2.15.0"}
+            ]
+          },
+          "references": [
+            {"url": "https://logging.apache.org/log4j/2.x/security.html"}
+          ],
+          "cwes": {"nodes": [{"cweId": "CWE-502"}, {"cweId": "CWE-917"}]}
+        }
+      ]
+    }
+  }
+}

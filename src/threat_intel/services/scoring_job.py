@@ -88,7 +88,13 @@ class ThreatScoringJob:
         if not ids:
             return []
         rows = await session.execute(
-            select(Threat).options(selectinload(Threat.cwes)).where(Threat.id.in_(ids))
+            select(Threat)
+            .options(
+                selectinload(Threat.cwes),
+                selectinload(Threat.indicators),
+                selectinload(Threat.sources),
+            )
+            .where(Threat.id.in_(ids))
         )
         return list(rows.scalars().all())
 
