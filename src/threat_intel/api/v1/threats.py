@@ -11,7 +11,7 @@ from threat_intel.models.base import Severity
 from threat_intel.models.source import Source as _Source
 from threat_intel.models.threat_source import ThreatSource as _ThreatSource
 from threat_intel.schemas.api.sources import ThreatSourceOut
-from threat_intel.schemas.threat import ThreatList, ThreatRead
+from threat_intel.schemas.threat import ThreatList
 from threat_intel.services.threats import list_threats
 
 router = APIRouter(prefix="/threats", tags=["threats"])
@@ -35,7 +35,7 @@ async def get_threats(
         offset=offset,
     )
     return ThreatList(
-        items=[ThreatRead.model_validate(t) for t in page.items],
+        items=page.items,  # already ThreatRead instances from service layer
         total=page.total,
         limit=page.limit,
         offset=page.offset,
