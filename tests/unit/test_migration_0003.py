@@ -65,7 +65,8 @@ def test_migration_0003_upgrades_with_existing_nvd_data(alembic_cfg):
             text(
                 "INSERT INTO threat (id, source_id, external_id, title, description, severity, "
                 "affected_products, references_json, raw_data, published_at, last_modified_at, "
-                "created_at, updated_at) VALUES (:id, :sid, 'CVE-2024-9999', 'title', 'desc', 'high', "
+                "created_at, updated_at) "
+                "VALUES (:id, :sid, 'CVE-2024-9999', 'title', 'desc', 'high', "
                 "'[]', '[]', :raw, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, "
                 "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             ),
