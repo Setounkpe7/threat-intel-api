@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker  # noqa: E402
 
 from threat_intel.core.config import Settings  # noqa: E402
 from threat_intel.core.db import build_engine, session_factory  # noqa: E402
-
 from threat_intel.main import create_app  # noqa: E402
 from threat_intel.models.base import Base, Severity, SourceKind  # noqa: E402
 from threat_intel.models.cve import CVE  # noqa: E402

@@ -1,11 +1,11 @@
 import json
-import os
 import uuid
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, text
+
+from alembic import command
 
 
 @pytest.fixture
@@ -35,7 +35,8 @@ def test_migration_0003_upgrades_with_existing_nvd_data(alembic_cfg):
     with eng.begin() as conn:
         conn.execute(text(
             "INSERT INTO source (name, kind, url, enabled, created_at, updated_at) "
-            "VALUES ('nvd', 'cve_feed', 'https://nvd.example/', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            "VALUES ('nvd', 'cve_feed', 'https://nvd.example/', 1, "
+            "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         ))
         src_id = conn.execute(text("SELECT id FROM source WHERE name='nvd'")).scalar_one()
         threat_id = str(uuid.uuid4())
@@ -46,7 +47,8 @@ def test_migration_0003_upgrades_with_existing_nvd_data(alembic_cfg):
             "INSERT INTO threat (id, source_id, external_id, title, description, severity, "
             "affected_products, references_json, raw_data, published_at, last_modified_at, "
             "created_at, updated_at) VALUES (:id, :sid, 'CVE-2024-9999', 'title', 'desc', 'high', "
-            "'[]', '[]', :raw, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            "'[]', '[]', :raw, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, "
+            "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         ), {"id": threat_id, "sid": src_id, "raw": raw})
 
     # Run M3a migration

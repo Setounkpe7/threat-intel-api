@@ -10,22 +10,20 @@ Covers:
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
 from threat_intel.collectors.base import BaseCollector, RawEvent
-from threat_intel.core.db import build_engine, session_factory as make_factory
+from threat_intel.core.db import build_engine
+from threat_intel.core.db import session_factory as make_factory
 from threat_intel.core.exceptions import CollectorHTTPError, CollectorParseError
 from threat_intel.models.base import Base, CollectorRunStatus, SourceKind
 from threat_intel.models.collector_run import CollectorRun
 from threat_intel.models.source import Source
 from threat_intel.schemas.ingest import CollectedEvent, CollectedIndicator
 from threat_intel.services.ingestion import IngestionService
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

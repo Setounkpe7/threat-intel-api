@@ -2,18 +2,17 @@
 
 from datetime import UTC, datetime
 
-import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from threat_intel.core.db import build_engine, session_factory as make_factory
+from threat_intel.core.db import build_engine
+from threat_intel.core.db import session_factory as make_factory
 from threat_intel.models.base import Base, Severity, SourceKind
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
 from threat_intel.models.threat_source import ThreatSource
 from threat_intel.schemas.ingest import CollectedEvent, CollectedIndicator
 from threat_intel.services.ingest import IngestService
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

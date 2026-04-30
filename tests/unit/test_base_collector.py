@@ -1,5 +1,4 @@
 import inspect
-from datetime import UTC, datetime
 
 from threat_intel.collectors.base import BaseCollector, RawEvent
 
