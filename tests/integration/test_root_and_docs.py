@@ -1,19 +1,16 @@
-"""Root redirect to /docs and nonce-based CSP on /docs and /redoc.
+"""Nonce-based CSP on /docs and /redoc.
 
 Background: FastAPI's auto-generated Swagger UI and ReDoc HTML embed an
 inline <script> that bootstraps the page. A strict CSP without
 'unsafe-inline' (which is what we want) blocks that script and the page
 renders blank. The fix is to serve the docs HTML with a per-request
 nonce and a per-route CSP that whitelists only that nonce.
+
+The root path `/` is now a server-rendered landing page — see
+`test_landing.py` for its contract.
 """
 
 import re
-
-
-async def test_root_redirects_to_docs(client):
-    resp = await client.get("/", follow_redirects=False)
-    assert resp.status_code in (301, 302, 307, 308)
-    assert resp.headers["location"] == "/docs"
 
 
 async def test_docs_returns_html_with_nonced_inline_script(client):
