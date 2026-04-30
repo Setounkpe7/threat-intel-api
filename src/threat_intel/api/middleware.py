@@ -40,6 +40,31 @@ def build_csp(nonce: str | None = None) -> str:
     )
 
 
+def build_landing_csp() -> str:
+    """CSP for the editorial landing page at `/`.
+
+    Tighter than the global default in two ways: no script CDN (the page
+    ships zero JS) and no jsdelivr in style-src. Wider in one way: the
+    landing pulls Newsreader and JetBrains Mono from Google Fonts, so
+    `style-src` and `font-src` whitelist those origins explicitly. Inline
+    styles are kept (the template embeds a single `<style>` block) — this
+    matches the global posture (`'unsafe-inline'` for style is already
+    accepted on /docs).
+    """
+    return (
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "object-src 'none'"
+    )
+
+
 _DEFAULT_CSP = build_csp()
 
 # Keep this list small and focused — every entry is one fewer browser API
