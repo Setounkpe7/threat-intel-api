@@ -12,6 +12,7 @@ from threat_intel.models.sector_profile import SectorProfile
 from threat_intel.models.sector_score import ThreatSectorScore
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
+from threat_intel.models.threat_source import ThreatSource
 
 ADMIN_KEY = "test-admin-key-please-rotate"
 
@@ -50,24 +51,35 @@ async def seeded_sectors(factory):
             ]
         ):
             tid = uuid.uuid4()
+            pub_at = now - timedelta(hours=age_h)
             t = Threat(
                 id=tid,
-                source_id=src.id,
-                external_id=f"CVE-2026-{1000 + i}",
+                threat_type="cve",
                 title=f"Apache Tomcat issue {i}",
-                description=f"Payment processing flaw {i}",
+                summary=f"Payment processing flaw {i}",
                 severity=sev,
                 cvss_score=8.0 if sev != Severity.medium else 4.0,
                 cvss_vector="CVSS:3.1/X",
                 cvss_version="3.1",
-                affected_products=[f"cpe:2.3:a:apache:tomcat:{i}"],
-                references=[f"https://x/{i}"],
-                published_at=now - timedelta(hours=age_h),
-                last_modified_at=now - timedelta(hours=age_h),
-                raw_data={},
+                tags=[],
+                published_at=pub_at,
+                last_modified_at=pub_at,
                 cwes=[cwe] if i == 0 else [],
             )
             s.add(t)
+            await s.flush()
+            ts = ThreatSource(
+                threat_id=tid,
+                source_id=src.id,
+                external_id=f"CVE-2026-{1000 + i}",
+                first_seen_at=pub_at,
+                last_seen_at=pub_at,
+                tags=["nvd"],
+                affected_products=[f"cpe:2.3:a:apache:tomcat:{i}"],
+                references=[f"https://x/{i}"],
+                raw_data={},
+            )
+            s.add(ts)
             threats.append(t)
 
         s.add(

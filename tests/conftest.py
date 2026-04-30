@@ -23,6 +23,7 @@ from threat_intel.models.cve import CVE  # noqa: E402
 from threat_intel.models.cwe import CWE  # noqa: E402
 from threat_intel.models.source import Source  # noqa: E402
 from threat_intel.models.threat import Threat  # noqa: E402
+from threat_intel.models.threat_source import ThreatSource  # noqa: E402
 
 
 @pytest.fixture
@@ -74,24 +75,35 @@ async def seeded_db(factory):
         ):
             cve_id = f"CVE-2026-{1000 + i}"
             tid = uuid.uuid4()
+            pub_at = now - timedelta(hours=age_h)
             t = Threat(
                 id=tid,
-                source_id=src.id,
-                external_id=cve_id,
+                threat_type="cve",
                 title=f"Title {i}",
-                description=f"Desc {i}",
+                summary=f"Desc {i}",
                 severity=sev,
                 cvss_score=8.0 if sev != Severity.low else 3.0,
                 cvss_vector="CVSS:3.1/AV:N",
                 cvss_version="3.1",
-                affected_products=[f"cpe:2.3:a:x:y:{i}"],
-                references=[f"https://r/{i}"],
-                published_at=now - timedelta(hours=age_h),
-                last_modified_at=now - timedelta(hours=age_h),
-                raw_data={"cve": {"id": cve_id}},
+                tags=[],
+                published_at=pub_at,
+                last_modified_at=pub_at,
                 cwes=[cwe] if i == 0 else [],
             )
             s.add(t)
+            await s.flush()
+            ts = ThreatSource(
+                threat_id=tid,
+                source_id=src.id,
+                external_id=cve_id,
+                first_seen_at=pub_at,
+                last_seen_at=pub_at,
+                tags=["nvd"],
+                affected_products=[f"cpe:2.3:a:x:y:{i}"],
+                references=[f"https://r/{i}"],
+                raw_data={"cve": {"id": cve_id}},
+            )
+            s.add(ts)
             s.add(CVE(cve_id=cve_id, threat_id=tid))
             rows.append(t)
         await s.commit()

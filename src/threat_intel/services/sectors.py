@@ -13,6 +13,7 @@ from threat_intel.models.sector_profile import SectorProfile
 from threat_intel.models.sector_score import ThreatSectorScore
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
+from threat_intel.models.threat_source import ThreatSource
 
 
 @dataclass
@@ -53,7 +54,10 @@ async def list_scored_threats(
     stmt = (
         select(Threat, ThreatSectorScore)
         .join(ThreatSectorScore, Threat.id == ThreatSectorScore.threat_id)
-        .options(selectinload(Threat.cwes))
+        .options(
+            selectinload(Threat.cwes),
+            selectinload(Threat.sources).selectinload(ThreatSource.source),
+        )
         .where(
             ThreatSectorScore.sector_id == sector_id,
             ThreatSectorScore.score >= min_score,
@@ -119,8 +123,8 @@ async def sector_dashboard_payload(
         (
             await session.execute(
                 select(Source.name)
-                .join(Threat, Threat.source_id == Source.id)
-                .join(ThreatSectorScore, Threat.id == ThreatSectorScore.threat_id)
+                .join(ThreatSource, ThreatSource.source_id == Source.id)
+                .join(ThreatSectorScore, ThreatSource.threat_id == ThreatSectorScore.threat_id)
                 .where(ThreatSectorScore.sector_id == sector_id)
                 .distinct()
             )

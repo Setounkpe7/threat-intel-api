@@ -8,24 +8,36 @@ from threat_intel.models.base import Severity
 
 
 class ThreatBase(BaseModel):
+    """Public API representation of a Threat — derived from the M3a model.
+
+    External-facing fields are populated from ThreatSource[*] by the service
+    layer (_to_read helper), preserving backward compatibility with M1/M2 callers.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    external_id: str
+    threat_type: str
     title: str
-    description: str
+    summary: str | None
     severity: Severity
     cvss_score: float | None
     cvss_vector: str | None
     cvss_version: str | None
-    affected_products: list[str]
-    references: list[str]
+    tags: list[str]
     published_at: datetime
     last_modified_at: datetime
 
+    # Backward-compatibility derived fields (populated by service layer)
+    external_id: str | None = None
+    description: str | None = None
+    affected_products: list[str] = []
+    references: list[str] = []
+    sources: list[str] = []
+
 
 class ThreatRead(ThreatBase):
-    """List representation. Excludes raw_data."""
+    """List representation."""
 
 
 class ThreatList(BaseModel):

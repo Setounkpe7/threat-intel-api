@@ -11,6 +11,7 @@ from threat_intel.models.sector_profile import SectorProfile
 from threat_intel.models.sector_score import ThreatSectorScore
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
+from threat_intel.models.threat_source import ThreatSource
 from threat_intel.services.scoring_job import ThreatScoringJob
 
 
@@ -36,22 +37,32 @@ async def _seed(factory, *, threat_count: int = 1, cwe_id: str = "CWE-79"):
             tid = uuid.uuid4()
             t = Threat(
                 id=tid,
-                source_id=src.id,
-                external_id=f"CVE-{i}",
+                threat_type="cve",
                 title="Apache Tomcat RCE",
-                description="Apache Tomcat payment processing flaw.",
+                summary="Apache Tomcat payment processing flaw.",
                 severity=Severity.high,
                 cvss_score=8.0,
                 cvss_vector="CVSS:3.1/X",
                 cvss_version="3.1",
-                affected_products=["cpe:2.3:a:apache:tomcat:9.0"],
-                references=[],
+                tags=[],
                 published_at=now,
                 last_modified_at=now,
-                raw_data={},
                 cwes=[cwe],
             )
             s.add(t)
+            await s.flush()
+            ts = ThreatSource(
+                threat_id=tid,
+                source_id=src.id,
+                external_id=f"CVE-{i}",
+                first_seen_at=now,
+                last_seen_at=now,
+                tags=["nvd"],
+                affected_products=["cpe:2.3:a:apache:tomcat:9.0"],
+                references=[],
+                raw_data={},
+            )
+            s.add(ts)
             threat_ids.append(tid)
         s.add(
             SectorProfile(
@@ -137,17 +148,14 @@ async def test_score_with_no_profiles_writes_nothing(factory):
         s.add(
             Threat(
                 id=tid,
-                source_id=src.id,
-                external_id="CVE-1",
+                threat_type="cve",
                 title="x",
-                description="x",
+                summary="x",
                 severity=Severity.high,
                 cvss_score=1.0,
-                affected_products=[],
-                references=[],
+                tags=[],
                 published_at=now,
                 last_modified_at=now,
-                raw_data={},
             )
         )
         await s.commit()

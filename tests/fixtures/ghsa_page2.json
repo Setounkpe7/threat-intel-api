@@ -1,0 +1,28 @@
+{
+  "data": {
+    "securityAdvisories": {
+      "pageInfo": {"hasNextPage": false, "endCursor": null},
+      "nodes": [
+        {
+          "ghsaId": "GHSA-aaaa-bbbb-cccc",
+          "summary": "Prototype pollution in lodash",
+          "description": "Versions of lodash before X are vulnerable to prototype pollution.",
+          "severity": "HIGH",
+          "publishedAt": "2024-01-01T00:00:00Z",
+          "updatedAt": "2024-01-02T00:00:00Z",
+          "identifiers": [
+            {"type": "GHSA", "value": "GHSA-aaaa-bbbb-cccc"},
+            {"type": "CVE", "value": "CVE-2024-12345"}
+          ],
+          "vulnerabilities": {
+            "nodes": [
+              {"package": {"ecosystem": "NPM", "name": "lodash"}, "vulnerableVersionRange": "< 4.17.21"}
+            ]
+          },
+          "references": [{"url": "https://example.com/lodash-advisory"}],
+          "cwes": {"nodes": [{"cweId": "CWE-1321"}]}
+        }
+      ]
+    }
+  }
+}

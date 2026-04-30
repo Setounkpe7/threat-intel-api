@@ -6,7 +6,7 @@
 [![image size](https://img.shields.io/badge/docker-195MB-blue)](Dockerfile)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
-A REST API that aggregates OSINT cyber-threat feeds, deduplicates them, scores them against configurable **sector profiles**, and exposes the result via versioned endpoints. Milestone 1 shipped the ingestion pipeline for NVD plus three endpoints. Milestone 2 added sector-aware scoring, per-sector dashboards, RSS feeds, hot-reloadable YAML profiles, admin endpoints, and rate limiting. The current DevSecOps phase adds a hardened container, a CI/CD security gate, and a documented vulnerability disclosure path — see [SECURITY.md](SECURITY.md).
+A REST API that aggregates Open-Source Intelligence (OSINT) cyber-threat feeds from three sources — National Vulnerability Database (NVD), CISA Known Exploited Vulnerabilities (KEV), and GitHub Security Advisories (GHSA) — deduplicates them across sources, scores them against configurable **sector profiles**, and exposes the result via versioned endpoints. Milestone 1 shipped the ingestion pipeline for NVD plus three endpoints. Milestone 2 added sector-aware scoring, per-sector dashboards, RSS feeds, hot-reloadable YAML profiles, admin endpoints, and rate limiting. Milestone 3a adds multi-source ingestion with cross-feed deduplication and indicator-of-compromise (IOC) lookups. The current DevSecOps phase adds a hardened container, a CI/CD security gate, and a documented vulnerability disclosure path — see [SECURITY.md](SECURITY.md).
 
 ## Local install (no Docker)
 
@@ -44,13 +44,27 @@ curl localhost:8000/health
 
 ## Trigger an ingestion run on demand
 
-By default, NVD is polled every 60 minutes by the in-process scheduler. To force a single run (useful in demos and the first time you bring the stack up):
+By default, NVD is polled every 60 minutes, CISA KEV every 6 hours, and GitHub Advisories every 2 hours, all driven by the in-process scheduler. To force a single run (useful in demos and the first time you bring the stack up):
 
 ```bash
 docker compose exec app python -m threat_intel.cli.collect_once nvd
+docker compose exec app python -m threat_intel.cli.collect_once cisa_kev
+docker compose exec app python -m threat_intel.cli.collect_once github_advisories
 ```
 
 You should see something like `inserted=27 updated=0 unchanged=0`.
+
+## Sources
+
+The platform ingests threat intelligence from three feeds, each chosen for a complementary signal:
+
+| Source | Type | Frequency | Auth | What it adds |
+|---|---|---|---|---|
+| **National Vulnerability Database (NVD)** | REST/JSON | every 60 min | Optional `NVD_API_KEY` | Authoritative Common Vulnerability Scoring System (CVSS) scores, weakness identifiers (CWE), affected product list (CPE). The reference catalog. |
+| **CISA Known Exploited Vulnerabilities (KEV)** | REST/JSON | every 6 hours | None | Confirmed in-the-wild exploitation. The strongest signal in threat intelligence — if a vulnerability is on KEV, attackers are using it now. Tags: `kev`, `actively-exploited`, `ransomware` (when applicable). |
+| **GitHub Security Advisories (GHSA)** | GraphQL | every 2 hours | `GITHUB_TOKEN` (no scope required) | Open-source supply-chain angle. Maps each vulnerability to affected packages by ecosystem (`npm:lodash`, `pypi:requests`, `maven:org.apache.logging.log4j:log4j-core`, etc.). |
+
+When the same Common Vulnerabilities and Exposures identifier (CVE-ID) appears across multiple feeds, the platform stores **one** Threat record with several Source rows attached — see [`docs/COLLECTORS.md`](docs/COLLECTORS.md) for the architecture and [`docs/INDICATORS.md`](docs/INDICATORS.md) for the indicator-of-compromise (IOC) lookup model.
 
 ## Endpoints
 
@@ -66,6 +80,9 @@ You should see something like `inserted=27 updated=0 unchanged=0`.
 | GET | `/api/v1/sectors/{id}/threats` | scored threats for a sector (`?min_score`, `?limit`, `?since`) |
 | GET | `/api/v1/sectors/{id}/dashboard` | top 24h / top 7d / aggregate stats |
 | GET | `/api/v1/sectors/{id}/feed.rss` | RSS 2.0 feed (default `min_score=70`) |
+| GET | `/api/v1/threats/{id}/sources` | all sources that document a given Threat |
+| GET | `/api/v1/sources` | global ingestion pipeline health (last-run, failure counts, enabled state) |
+| GET | `/api/v1/indicators` | reverse IOC lookup: `?type=cve&value=CVE-2021-44228` — see [`docs/INDICATORS.md`](docs/INDICATORS.md) |
 | GET | `/api/v1/stats/global` | aggregated stats for a future public dashboard |
 | GET | `/docs` | Swagger UI |
 | GET | `/openapi.json` | machine-readable schema |
@@ -114,14 +131,15 @@ curl 'http://localhost:8000/api/v1/sectors/finance/feed.rss?min_score=70' \
 
 ```mermaid
 flowchart LR
-    NVD[NVD feed] --> Collector
-    Collector --> Ingestion["IngestionService<br/>(dedup + upsert)"]
-    Ingestion --> Threat[(threat)]
-    Threat --> ScoringJob[ThreatScoringJob]
+    NVD[NVD feed] --> Ingest
+    KEV[CISA KEV feed] --> Ingest
+    GHSA[GitHub Advisories] --> Ingest
+    Ingest["IngestService<br/>(cross-source dedup)"] --> Threat[(threat + threat_source<br/>+ threat_indicator)]
+    Threat --> ScoringJob[SectorScoringService]
     ProfileLoader[SectorProfileLoader] --> Profiles[(sector_profile)]
     Profiles --> ScoringJob
     ScoringJob --> Scores[(threat_sector_score)]
-    Scores --> API[/api/v1/sectors/.../]
+    Scores --> API[FastAPI v1<br/>/threats /sources /indicators]
     Threat --> API
 ```
 
@@ -129,12 +147,12 @@ flowchart LR
 
 ```
 src/threat_intel/
-├── api/                 FastAPI routers (health, v1.threats, v1.cve)
-├── collectors/          Source adapters (BaseCollector + NVDCollector)
+├── api/                 FastAPI routers (health, v1.threats, v1.cve, v1.indicators, v1.sources)
+├── collectors/          Source adapters (BaseCollector, NVDCollector, CISAKEVCollector, GitHubAdvisoriesCollector)
 ├── analyzers/           Dedup, scoring (M2)
-├── services/            Ingestion + query layer
-├── schemas/             Pydantic request/response models
-├── models/              SQLAlchemy ORM
+├── services/            IngestService (cross-source dedup + field-level priority), query layer
+├── schemas/             Pydantic request/response models (incl. CollectedEvent)
+├── models/              SQLAlchemy ORM (threat, threat_source, threat_indicator)
 ├── core/                Config, DB engine, logging, exceptions, scheduler
 ├── cli/                 Typer commands for ops/demos
 └── main.py              create_app() + lifespan
@@ -144,13 +162,13 @@ Tests live under `tests/unit/` and `tests/integration/`. Migrations are in `alem
 
 ## Adding a new collector
 
-The whole point of `BaseCollector` is that adding a new source costs you a single file plus a registration. Walking through it:
+The whole point of `BaseCollector` is that adding a new source costs you a single file plus a registration. See [`docs/COLLECTORS.md`](docs/COLLECTORS.md) for a detailed authoring guide, field-level priority rules, the `CollectedEvent` contract, and a full checklist.
 
-1. **Create the collector** at `src/threat_intel/collectors/<source>.py`. Inherit `BaseCollector`, set `source_name` and `source_kind` class attributes, and implement `fetch(since)` (returns an `AsyncIterator[RawEvent]`) and `normalize(raw)` (returns a `ThreatDraft`).
-2. **Map your source's severity / CVSS / IDs** inside `normalize()` to the `ThreatDraft` fields. Anything you don't have, leave as `None` or empty list — the API model already handles missing data.
-3. **Register it** in `src/threat_intel/main.py`: instantiate it inside the lifespan and add it to the `IngestionService` collectors list and to `app.state.collector_names`.
-4. **Schedule it** in `core/scheduler.py` if you want a periodic job.
-5. **Add unit tests** under `tests/unit/test_<source>_collector.py` using `respx` to stub the upstream HTTP calls. Save a representative payload under `tests/fixtures/`.
+Quick summary:
+1. **Pick a base class** — REST/JSON → `APIRestCollector`, GraphQL → `APIGraphQLCollector`.
+2. **Create the file** at `src/threat_intel/collectors/<source>.py`. Set `source_name`, `source_kind`, and `base_interval_minutes`. Implement `fetch(since)` and `to_event(raw)`.
+3. **Register it** in `src/threat_intel/main.py` alongside the other collectors.
+4. **Add unit tests** under `tests/unit/collectors/test_<source>.py` with a `respx`-stubbed happy path and a `to_event` mapping table.
 
 Dedup, persistence, API exposure, and `/health` reporting all come for free — they key off `source_name` + `external_id`.
 
@@ -202,6 +220,12 @@ Production runs on [Railway](https://railway.app), with a managed Postgres add-o
 
 Operator runbook: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Covers first-time setup, the deploy flow, rollback, secrets rotation, and troubleshooting.
 
-## Deliberately out of scope for M2
+## Deliberately out of scope for M3a
 
-NLP entity extraction (M3), alerting webhooks (M4), STIX/TAXII export (M5), public dashboard frontend (M6), additional collectors — RSS / GitHub Advisories / OTX (later). The data model and collector interface are designed so each of those lands without breaking what's here.
+- RSS feeds and other heterogeneous IOC source types (planned for M3b)
+- Webhooks for real-time alerting (M4)
+- STIX/TAXII export — structured threat-information formats used in enterprise security toolchains
+- Natural-language extraction of indicators from unstructured text
+- Public dashboard frontend (M6)
+
+The data model and collector interface are designed so each of those lands without breaking what's here.
