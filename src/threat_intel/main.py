@@ -124,19 +124,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             errors=len(load_result.errors),
         )
 
-        async def run_nvd() -> None:
-            try:
-                await ingestion.run("nvd")
-            except Exception:  # noqa: BLE001
-                logger.exception("scheduled_nvd_run_failed")
-
         async def run_daily_rescore() -> None:
             try:
                 await scoring_job.score_threats_since(daily_recent_window())
             except Exception:  # noqa: BLE001
                 logger.exception("scheduled_rescore_failed")
 
-        scheduler = build_scheduler(settings, run_nvd, run_daily_rescore)
+        scheduler = build_scheduler(
+            settings,
+            ingestion=ingestion,
+            session_factory=factory,
+            daily_rescore_runner=run_daily_rescore,
+        )
         scheduler.start()
 
         app.state.settings = settings
