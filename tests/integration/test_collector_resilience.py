@@ -197,9 +197,7 @@ async def test_scheduler_tick_isolates_broken_collector(factory):
             ("good_two", 0),
             ("broken_col", 1),
         ]:
-            src_row = (
-                await s.execute(select(Source).where(Source.name == src_name))
-            ).scalar_one()
+            src_row = (await s.execute(select(Source).where(Source.name == src_name))).scalar_one()
             assert src_row.consecutive_failures == expected_failures, (
                 f"{src_name}: expected consecutive_failures={expected_failures}, "
                 f"got {src_row.consecutive_failures}"

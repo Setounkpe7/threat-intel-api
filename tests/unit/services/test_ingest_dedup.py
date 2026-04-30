@@ -130,8 +130,10 @@ async def test_create_when_no_match(factory, source_nvd):
         threat = (await s.execute(select(Threat).where(Threat.id == tid))).scalar_one()
         assert threat.threat_type == "cve"
         ts_rows = (
-            await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))
-        ).scalars().all()
+            (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid)))
+            .scalars()
+            .all()
+        )
         assert len(ts_rows) == 1
         assert ts_rows[0].source_id == source_nvd.id
 
@@ -163,8 +165,10 @@ async def test_dedup_same_cve_second_source(factory, source_nvd, source_kev):
 
     async with factory() as s:
         ts_rows = (
-            await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid1))
-        ).scalars().all()
+            (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid1)))
+            .scalars()
+            .all()
+        )
         assert len(ts_rows) == 2
         source_ids = {r.source_id for r in ts_rows}
         assert source_nvd.id in source_ids
@@ -224,6 +228,8 @@ async def test_idempotent_same_source_reingest(factory, source_nvd):
     async with factory() as s:
         # Still only one ThreatSource row
         ts_rows = (
-            await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid1))
-        ).scalars().all()
+            (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid1)))
+            .scalars()
+            .all()
+        )
         assert len(ts_rows) == 1

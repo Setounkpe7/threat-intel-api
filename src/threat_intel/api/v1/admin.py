@@ -107,9 +107,7 @@ async def enable_collector(name: str, request: Request) -> CollectorActionResult
         src.next_run_at = _dt.now(UTC)
         await session.commit()
         next_run = src.next_run_at
-    return CollectorActionResult(
-        name=name, enabled=True, next_run_at=next_run, detail="Enabled"
-    )
+    return CollectorActionResult(name=name, enabled=True, next_run_at=next_run, detail="Enabled")
 
 
 @router.post("/collectors/{name}/disable", response_model=CollectorActionResult)
@@ -123,6 +121,4 @@ async def disable_collector(name: str, request: Request) -> CollectorActionResul
             raise HTTPException(status_code=404, detail=f"Unknown collector: {name}")
         src.enabled = False
         await session.commit()
-    return CollectorActionResult(
-        name=name, enabled=False, next_run_at=None, detail="Disabled"
-    )
+    return CollectorActionResult(name=name, enabled=False, next_run_at=None, detail="Disabled")

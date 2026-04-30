@@ -8,9 +8,7 @@ from threat_intel.core.exceptions import CollectorParseError
 from threat_intel.models.base import SourceKind
 from threat_intel.schemas.ingest import CollectedEvent, CollectedIndicator
 
-CISA_KEV_URL = (
-    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-)
+CISA_KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
 
 class CISAKEVCollector(APIRestCollector):

@@ -15,9 +15,7 @@ if TYPE_CHECKING:
 
 class ThreatSource(Base, TimestampMixin):
     __tablename__ = "threat_source"
-    __table_args__ = (
-        Index("ix_threat_source_source_external", "source_id", "external_id"),
-    )
+    __table_args__ = (Index("ix_threat_source_source_external", "source_id", "external_id"),)
 
     threat_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("threat.id", ondelete="CASCADE"), primary_key=True

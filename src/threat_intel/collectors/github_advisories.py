@@ -66,9 +66,7 @@ class GitHubAdvisoriesCollector(APIGraphQLCollector):
             return
         cursor: str | None = None
         while True:
-            data = await self._execute_query(
-                _QUERY, {"since": since.isoformat(), "cursor": cursor}
-            )
+            data = await self._execute_query(_QUERY, {"since": since.isoformat(), "cursor": cursor})
             page = data["data"]["securityAdvisories"]
             for node in page["nodes"]:
                 yield RawEvent(
@@ -98,15 +96,11 @@ class GitHubAdvisoriesCollector(APIGraphQLCollector):
                 if eco and name:
                     packages.append((eco, name))
 
-            indicators: list[CollectedIndicator] = [
-                CollectedIndicator(type="ghsa", value=ghsa_id)
-            ]
+            indicators: list[CollectedIndicator] = [CollectedIndicator(type="ghsa", value=ghsa_id)]
             for cid in cve_ids:
                 indicators.append(CollectedIndicator(type="cve", value=cid))
             for eco, name in packages:
-                indicators.append(
-                    CollectedIndicator(type="package", value=f"{eco}:{name}"[:512])
-                )
+                indicators.append(CollectedIndicator(type="package", value=f"{eco}:{name}"[:512]))
 
             tags = ["github-advisory"]
             for eco, _ in packages:
@@ -139,6 +133,4 @@ class GitHubAdvisoriesCollector(APIGraphQLCollector):
                 },
             )
         except (KeyError, TypeError, ValueError) as e:
-            raise CollectorParseError(
-                f"GHSA payload malformed for {raw.external_id}: {e}"
-            ) from e
+            raise CollectorParseError(f"GHSA payload malformed for {raw.external_id}: {e}") from e

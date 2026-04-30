@@ -75,9 +75,7 @@ class APIRestCollector(BaseCollector):
                 reraise=True,
             ):
                 with attempt:
-                    resp = await self.http.get(
-                        url, params=params, headers=headers, timeout=30.0
-                    )
+                    resp = await self.http.get(url, params=params, headers=headers, timeout=30.0)
                     if resp.status_code in _RETRY_STATUSES:
                         raise _RetryableHTTPError(resp.status_code, str(resp.url))
                     if resp.status_code >= 400:
@@ -93,9 +91,7 @@ class APIRestCollector(BaseCollector):
                 status_code=e.status_code, url=e.url, message="retry attempts exhausted"
             ) from e
         except httpx.TransportError as e:
-            raise CollectorHTTPError(
-                status_code=0, url=url, message=f"transport error: {e}"
-            ) from e
+            raise CollectorHTTPError(status_code=0, url=url, message=f"transport error: {e}") from e
         raise CollectorHTTPError(status_code=0, url=url, message="retry loop exhausted")
 
 
@@ -117,9 +113,7 @@ class APIGraphQLCollector(BaseCollector):
         else:
             self._token = token
 
-    async def _execute_query(
-        self, query: str, variables: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _execute_query(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         if not self._token:
             raise CollectorHTTPError(
                 status_code=0,

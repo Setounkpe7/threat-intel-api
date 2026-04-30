@@ -178,9 +178,7 @@ async def test_successful_run_writes_collector_run(factory, source):
     assert result.events_failed == 0
 
     async with factory() as s:
-        run_row = (
-            await s.execute(select(CollectorRun))
-        ).scalars().first()
+        run_row = (await s.execute(select(CollectorRun))).scalars().first()
         assert run_row is not None
         assert run_row.status == CollectorRunStatus.success
         assert run_row.events_fetched == 3
@@ -191,9 +189,7 @@ async def test_successful_run_writes_collector_run(factory, source):
         assert run_row.duration_ms is not None
         assert run_row.duration_ms >= 0
 
-        src = (
-            await s.execute(select(Source).where(Source.name == "test_collector"))
-        ).scalar_one()
+        src = (await s.execute(select(Source).where(Source.name == "test_collector"))).scalar_one()
         assert src.consecutive_failures == 0
         assert src.last_success_at is not None
         assert src.last_error is None
@@ -214,17 +210,13 @@ async def test_failure_increments_consecutive_failures(factory, source):
         await svc.run("test_collector")
 
     async with factory() as s:
-        run_row = (
-            await s.execute(select(CollectorRun))
-        ).scalars().first()
+        run_row = (await s.execute(select(CollectorRun))).scalars().first()
         assert run_row is not None
         assert run_row.status == CollectorRunStatus.failure
         assert run_row.error_message is not None
         assert "CollectorHTTPError" in run_row.error_message
 
-        src = (
-            await s.execute(select(Source).where(Source.name == "test_collector"))
-        ).scalar_one()
+        src = (await s.execute(select(Source).where(Source.name == "test_collector"))).scalar_one()
         assert src.consecutive_failures == 1
         assert src.last_error is not None
         assert src.next_run_at is not None
@@ -247,9 +239,7 @@ async def test_third_failure_doubles_interval(factory, source):
             await svc.run("test_collector")
 
     async with factory() as s:
-        src = (
-            await s.execute(select(Source).where(Source.name == "test_collector"))
-        ).scalar_one()
+        src = (await s.execute(select(Source).where(Source.name == "test_collector"))).scalar_one()
         assert src.consecutive_failures == 3
         # After exactly 3 failures: doubling happens on the 3rd, so doubled once
         assert src.current_interval_minutes == min(original_interval * 2, 1440)
@@ -279,9 +269,7 @@ async def test_success_resets_backoff(factory, source):
     assert result.inserted == 1
 
     async with factory() as s:
-        src = (
-            await s.execute(select(Source).where(Source.name == "test_collector"))
-        ).scalar_one()
+        src = (await s.execute(select(Source).where(Source.name == "test_collector"))).scalar_one()
         assert src.consecutive_failures == 0
         assert src.current_interval_minutes == src.base_interval_minutes
         assert src.last_success_at is not None
@@ -304,9 +292,7 @@ async def test_per_event_failure_yields_partial_status(factory, source):
     assert result.events_failed == 1
 
     async with factory() as s:
-        run_row = (
-            await s.execute(select(CollectorRun))
-        ).scalars().first()
+        run_row = (await s.execute(select(CollectorRun))).scalars().first()
         assert run_row is not None
         assert run_row.status == CollectorRunStatus.partial
         assert run_row.events_fetched == 3

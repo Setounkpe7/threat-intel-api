@@ -27,19 +27,17 @@ def _to_read(threat: Threat) -> ThreatRead:
     sources = list(threat.sources or [])
 
     # Pick external_id: prefer the NVD ThreatSource, else first available
-    nvd_source = next(
-        (s for s in sources if s.source and s.source.name == "nvd"), None
-    )
+    nvd_source = next((s for s in sources if s.source and s.source.name == "nvd"), None)
     representative = nvd_source or (sources[0] if sources else None)
     external_id_value = representative.external_id if representative else None
 
     products: list[str] = []
     refs: list[str] = []
     for s in sources:
-        for p in (s.affected_products or []):
+        for p in s.affected_products or []:
             if p not in products:
                 products.append(p)
-        for r in (s.references or []):
+        for r in s.references or []:
             if r not in refs:
                 refs.append(r)
 
@@ -79,9 +77,7 @@ async def list_threats(
 ) -> ThreatPage:
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
-    base = select(Threat).options(
-        selectinload(Threat.sources).selectinload(ThreatSource.source)
-    )
+    base = select(Threat).options(selectinload(Threat.sources).selectinload(ThreatSource.source))
     count_base = select(func.count(Threat.id))
 
     conditions: list[Any] = []
@@ -126,7 +122,9 @@ async def get_threat_by_cve(session: AsyncSession, cve_id: str) -> Threat | None
         await session.execute(
             select(CVE)
             .options(
-                selectinload(CVE.threat).selectinload(Threat.sources).selectinload(ThreatSource.source)
+                selectinload(CVE.threat)
+                .selectinload(Threat.sources)
+                .selectinload(ThreatSource.source)
             )
             .where(CVE.cve_id == cve_id)
         )
@@ -157,8 +155,6 @@ async def stats(session: AsyncSession) -> tuple[int, int]:
     yesterday = datetime.now(UTC) - timedelta(hours=24)
     total = (await session.execute(select(func.count(Threat.id)))).scalar_one()
     last_24h = (
-        await session.execute(
-            select(func.count(Threat.id)).where(Threat.published_at >= yesterday)
-        )
+        await session.execute(select(func.count(Threat.id)).where(Threat.published_at >= yesterday))
     ).scalar_one()
     return int(total), int(last_24h)

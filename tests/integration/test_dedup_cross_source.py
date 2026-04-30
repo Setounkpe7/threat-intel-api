@@ -147,8 +147,10 @@ async def test_cross_source_dedup_log4shell(factory, sources):
 
         # Three ThreatSource rows
         ts_rows = (
-            await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid1))
-        ).scalars().all()
+            (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid1)))
+            .scalars()
+            .all()
+        )
         assert len(ts_rows) == 3
 
         # NVD wins CVSS (priority order: nvd > github_advisories > cisa_kev)

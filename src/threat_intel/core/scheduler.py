@@ -27,20 +27,22 @@ async def _run_safe(ingestion: IngestionService, source_name: str) -> None:
         logger.exception("scheduler.run_failed", source=source_name)
 
 
-async def _scheduler_tick(
-    ingestion: IngestionService, session_factory: _SessionFactory
-) -> None:
+async def _scheduler_tick(ingestion: IngestionService, session_factory: _SessionFactory) -> None:
     try:
         now = datetime.now(UTC)
         async with session_factory() as session:
             rows = (
-                await session.execute(
-                    select(Source).where(
-                        Source.enabled == True,  # noqa: E712
-                        or_(Source.next_run_at.is_(None), Source.next_run_at <= now),
+                (
+                    await session.execute(
+                        select(Source).where(
+                            Source.enabled == True,  # noqa: E712
+                            or_(Source.next_run_at.is_(None), Source.next_run_at <= now),
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
         for src in rows:
             asyncio.create_task(_run_safe(ingestion, src.name))
     except Exception:  # noqa: BLE001

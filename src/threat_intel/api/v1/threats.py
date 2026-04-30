@@ -43,9 +43,7 @@ async def get_threats(
 
 
 @router.get("/{threat_id}/sources", response_model=list[ThreatSourceOut])
-async def list_threat_sources(
-    threat_id: _uuid.UUID, request: Request
-) -> list[ThreatSourceOut]:
+async def list_threat_sources(threat_id: _uuid.UUID, request: Request) -> list[ThreatSourceOut]:
     sf = request.app.state.session_factory
     async with sf() as session:
         rows = (

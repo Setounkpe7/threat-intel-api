@@ -71,9 +71,7 @@ async def test_indicators_finds_threat_by_cve(client, factory):
 
 async def test_indicators_finds_by_package(client, factory):
     pkg_value = "npm:react"
-    await _seed_threat_with_indicator(
-        factory, ind_type=IndicatorType.package, ind_value=pkg_value
-    )
+    await _seed_threat_with_indicator(factory, ind_type=IndicatorType.package, ind_value=pkg_value)
     resp = await client.get("/api/v1/indicators", params={"type": "package", "value": pkg_value})
     assert resp.status_code == 200
     body = resp.json()

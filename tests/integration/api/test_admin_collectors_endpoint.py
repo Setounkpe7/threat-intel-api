@@ -102,16 +102,12 @@ async def test_trigger_requires_admin_key(admin_client, nvd_source):
 
 
 async def test_trigger_404_on_unknown_collector(admin_client):
-    resp = await admin_client.post(
-        "/api/v1/admin/collectors/nope/trigger", headers=ADMIN_HEADERS
-    )
+    resp = await admin_client.post("/api/v1/admin/collectors/nope/trigger", headers=ADMIN_HEADERS)
     assert resp.status_code == 404
 
 
 async def test_trigger_dispatches_in_background(admin_client, nvd_source):
-    resp = await admin_client.post(
-        "/api/v1/admin/collectors/nvd/trigger", headers=ADMIN_HEADERS
-    )
+    resp = await admin_client.post("/api/v1/admin/collectors/nvd/trigger", headers=ADMIN_HEADERS)
     assert resp.status_code == 200
     body = resp.json()
     assert body["name"] == "nvd"
@@ -121,9 +117,7 @@ async def test_trigger_dispatches_in_background(admin_client, nvd_source):
 
 
 async def test_enable_resets_backoff(admin_client, factory, disabled_source):
-    resp = await admin_client.post(
-        "/api/v1/admin/collectors/nvd/enable", headers=ADMIN_HEADERS
-    )
+    resp = await admin_client.post("/api/v1/admin/collectors/nvd/enable", headers=ADMIN_HEADERS)
     assert resp.status_code == 200
     body = resp.json()
     assert body["enabled"] is True
@@ -142,9 +136,7 @@ async def test_enable_resets_backoff(admin_client, factory, disabled_source):
 
 
 async def test_disable_flips_enabled(admin_client, factory, nvd_source):
-    resp = await admin_client.post(
-        "/api/v1/admin/collectors/nvd/disable", headers=ADMIN_HEADERS
-    )
+    resp = await admin_client.post("/api/v1/admin/collectors/nvd/disable", headers=ADMIN_HEADERS)
     assert resp.status_code == 200
     body = resp.json()
     assert body["enabled"] is False
@@ -158,14 +150,10 @@ async def test_disable_flips_enabled(admin_client, factory, nvd_source):
 
 
 async def test_admin_collector_enable_404_on_unknown(admin_client):
-    resp = await admin_client.post(
-        "/api/v1/admin/collectors/ghost/enable", headers=ADMIN_HEADERS
-    )
+    resp = await admin_client.post("/api/v1/admin/collectors/ghost/enable", headers=ADMIN_HEADERS)
     assert resp.status_code == 404
 
 
 async def test_admin_collector_disable_404_on_unknown(admin_client):
-    resp = await admin_client.post(
-        "/api/v1/admin/collectors/ghost/disable", headers=ADMIN_HEADERS
-    )
+    resp = await admin_client.post("/api/v1/admin/collectors/ghost/disable", headers=ADMIN_HEADERS)
     assert resp.status_code == 404

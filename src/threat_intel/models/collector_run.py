@@ -8,9 +8,7 @@ from threat_intel.models.base import Base, CollectorRunStatus, TimestampMixin, U
 
 class CollectorRun(Base, TimestampMixin):
     __tablename__ = "collector_run"
-    __table_args__ = (
-        Index("ix_collector_run_source_started", "source_id", "started_at"),
-    )
+    __table_args__ = (Index("ix_collector_run_source_started", "source_id", "started_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     source_id: Mapped[int] = mapped_column(ForeignKey("source.id", ondelete="CASCADE"))

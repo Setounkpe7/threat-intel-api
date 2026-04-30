@@ -26,9 +26,7 @@ async def get_cve(
 
     # Merge raw_data from the first available ThreatSource (prefer NVD)
     sources = list(threat.sources or [])
-    nvd_source = next(
-        (s for s in sources if s.source and s.source.name == "nvd"), None
-    )
+    nvd_source = next((s for s in sources if s.source and s.source.name == "nvd"), None)
     representative = nvd_source or (sources[0] if sources else None)
     raw_data = representative.raw_data if representative else {}
 

@@ -89,9 +89,7 @@ async def test_graphql_disabled_when_token_missing(monkeypatch):
 @respx.mock
 async def test_graphql_execute_query_attaches_bearer(monkeypatch):
     monkeypatch.setenv("TEST_TOKEN", "secret")
-    route = respx.post("https://gql.example.test/graphql").respond(
-        200, json={"data": {"x": 1}}
-    )
+    route = respx.post("https://gql.example.test/graphql").respond(200, json={"data": {"x": 1}})
     async with httpx.AsyncClient() as http:
         c = _DummyGraphQL(http, Settings())
         result = await c._execute_query("query { x }", {})

@@ -34,9 +34,7 @@ def _is_postgres(session: AsyncSession) -> bool:
     return bind.dialect.name == "postgresql"
 
 
-def _upsert_indicator_stmt(
-    session: AsyncSession, values: dict[str, Any]
-) -> Executable:
+def _upsert_indicator_stmt(session: AsyncSession, values: dict[str, Any]) -> Executable:
     """ON CONFLICT DO NOTHING upsert for ThreatIndicator; works on both PG and SQLite."""
     if _is_postgres(session):
         pg_stmt = pg_insert(ThreatIndicator.__table__).values(**values)  # type: ignore[arg-type]
@@ -44,28 +42,26 @@ def _upsert_indicator_stmt(
             index_elements=["threat_id", "indicator_type", "value"]
         )
     sq_stmt = sqlite_insert(ThreatIndicator.__table__).values(**values)  # type: ignore[arg-type]
-    return sq_stmt.on_conflict_do_nothing(
-        index_elements=["threat_id", "indicator_type", "value"]
-    )
+    return sq_stmt.on_conflict_do_nothing(index_elements=["threat_id", "indicator_type", "value"])
 
 
 async def _lookup_threat_ids_by_indicators(
     session: AsyncSession, indicators: list[Any]
 ) -> list[uuid.UUID]:
-    keys = [
-        (IndicatorType[i.type], i.value)
-        for i in indicators
-        if i.type in ("cve", "ghsa")
-    ]
+    keys = [(IndicatorType[i.type], i.value) for i in indicators if i.type in ("cve", "ghsa")]
     if not keys:
         return []
     rows = (
-        await session.execute(
-            select(ThreatIndicator.threat_id).where(
-                tuple_(ThreatIndicator.indicator_type, ThreatIndicator.value).in_(keys)
+        (
+            await session.execute(
+                select(ThreatIndicator.threat_id).where(
+                    tuple_(ThreatIndicator.indicator_type, ThreatIndicator.value).in_(keys)
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     seen: list[uuid.UUID] = []
     for r in rows:
         if r not in seen:
@@ -158,13 +154,9 @@ class IngestService:
         await session.flush()
         return threat.id
 
-    async def _pick_oldest(
-        self, session: AsyncSession, ids: list[uuid.UUID]
-    ) -> uuid.UUID:
+    async def _pick_oldest(self, session: AsyncSession, ids: list[uuid.UUID]) -> uuid.UUID:
         rows = (
-            await session.execute(
-                select(Threat.id, Threat.created_at).where(Threat.id.in_(ids))
-            )
+            await session.execute(select(Threat.id, Threat.created_at).where(Threat.id.in_(ids)))
         ).all()
         rows_sorted = sorted(rows, key=lambda r: r[1])
         return uuid.UUID(str(rows_sorted[0][0]))
@@ -177,12 +169,10 @@ class IngestService:
         event: CollectedEvent,
     ) -> None:
         affected = (
-            event.raw_data.get("affected_products")
-            if isinstance(event.raw_data, dict) else None
+            event.raw_data.get("affected_products") if isinstance(event.raw_data, dict) else None
         ) or []
         references = (
-            event.raw_data.get("references")
-            if isinstance(event.raw_data, dict) else None
+            event.raw_data.get("references") if isinstance(event.raw_data, dict) else None
         ) or []
         existing = (
             await session.execute(
@@ -247,11 +237,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
         return
 
     sources = (
-        (
-            await session.execute(
-                select(ThreatSource).where(ThreatSource.threat_id == threat_id)
-            )
-        )
+        (await session.execute(select(ThreatSource).where(ThreatSource.threat_id == threat_id)))
         .scalars()
         .all()
     )
@@ -307,7 +293,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
 
     tags: list[str] = []
     for src_ts in sources:
-        for tag in (src_ts.tags or []):
+        for tag in src_ts.tags or []:
             if tag not in tags:
                 tags.append(tag)
     if "kev" in tags and _SEVERITY_RANK.get(severity, 0) < _SEVERITY_RANK[Severity.critical]:
@@ -335,9 +321,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
 
     if cwe_ids:
         existing_cwes = (
-            (await session.execute(select(CWE).where(CWE.id.in_(cwe_ids))))
-            .scalars()
-            .all()
+            (await session.execute(select(CWE).where(CWE.id.in_(cwe_ids)))).scalars().all()
         )
         found = {c.id for c in existing_cwes}
         new_cwes = [CWE(id=cid) for cid in cwe_ids if cid not in found]

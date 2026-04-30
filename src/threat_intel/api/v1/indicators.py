@@ -23,9 +23,7 @@ async def find_threats_by_indicator(
     try:
         ind_type = IndicatorType(type)
     except ValueError as e:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid indicator type: {type}"
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Invalid indicator type: {type}") from e
     sf = request.app.state.session_factory
     async with sf() as session:
         threat_ids: list[uuid.UUID] = (
@@ -43,8 +41,6 @@ async def find_threats_by_indicator(
         if not threat_ids:
             return []
         threats = (
-            (await session.execute(select(Threat).where(Threat.id.in_(threat_ids))))
-            .scalars()
-            .all()
+            (await session.execute(select(Threat).where(Threat.id.in_(threat_ids)))).scalars().all()
         )
     return [ThreatOut.model_validate(t, from_attributes=True) for t in threats]

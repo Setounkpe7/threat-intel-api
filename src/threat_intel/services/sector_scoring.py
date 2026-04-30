@@ -81,8 +81,8 @@ def _build_corpus(threat: Threat) -> str:
     Multiple spaces are normalized so that '\\b' boundaries behave predictably.
     """
     products: list[str] = []
-    for ts in (threat.sources or []):
-        for p in (getattr(ts, "affected_products", None) or []):
+    for ts in threat.sources or []:
+        for p in getattr(ts, "affected_products", None) or []:
             if p not in products:
                 products.append(p)
     parts = [
@@ -165,7 +165,7 @@ class SectorScoringService:
 
         pkg_matched: list[str] = []
         techs_lower = {t.lower() for t in (profile.technologies or [])}
-        for ind in (getattr(threat, "indicators", None) or []):
+        for ind in getattr(threat, "indicators", None) or []:
             if ind.indicator_type != IndicatorType.package:
                 continue
             value_lower = ind.value.lower()

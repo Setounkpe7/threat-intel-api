@@ -32,10 +32,12 @@ async def test_disabled_when_token_missing(monkeypatch):
 async def test_fetch_paginates_until_no_next_page():
     page1 = json.loads(F1.read_text())
     page2 = json.loads(F2.read_text())
-    route = respx.post(GHSA_ENDPOINT).mock(side_effect=[
-        httpx.Response(200, json=page1),
-        httpx.Response(200, json=page2),
-    ])
+    route = respx.post(GHSA_ENDPOINT).mock(
+        side_effect=[
+            httpx.Response(200, json=page1),
+            httpx.Response(200, json=page2),
+        ]
+    )
     async with httpx.AsyncClient() as http:
         c = GitHubAdvisoriesCollector(http, Settings())
         events = [r async for r in c.fetch(datetime.now(UTC) - timedelta(days=7))]

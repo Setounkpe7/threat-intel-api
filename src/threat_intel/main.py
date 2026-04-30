@@ -115,17 +115,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
         await _ensure_source_row(factory, "nvd", SourceKind.cve_feed, settings.nvd_base_url)
-        await _ensure_source_row(factory, "cisa_kev", SourceKind.cve_feed, "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json")
-        await _ensure_source_row(factory, "github_advisories", SourceKind.advisory, "https://api.github.com/graphql")
+        await _ensure_source_row(
+            factory,
+            "cisa_kev",
+            SourceKind.cve_feed,
+            "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        )
+        await _ensure_source_row(
+            factory, "github_advisories", SourceKind.advisory, "https://api.github.com/graphql"
+        )
 
         # Sync Source.enabled in DB for any disabled collectors
         async with factory() as session:
             for c in collectors:
                 if not c.enabled:
                     src = (
-                        await session.execute(
-                            select(Source).where(Source.name == c.source_name)
-                        )
+                        await session.execute(select(Source).where(Source.name == c.source_name))
                     ).scalar_one_or_none()
                     if src and src.enabled:
                         src.enabled = False

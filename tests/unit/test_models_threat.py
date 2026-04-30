@@ -65,9 +65,7 @@ async def test_threat_with_cwes_and_source():
 
     async with factory() as session:
         stmt = (
-            select(Threat)
-            .options(selectinload(Threat.cwes))
-            .where(Threat.title == "Log4Shell RCE")
+            select(Threat).options(selectinload(Threat.cwes)).where(Threat.title == "Log4Shell RCE")
         )
         row = (await session.execute(stmt)).scalar_one()
         assert row.cvss_score == 10.0
@@ -76,9 +74,7 @@ async def test_threat_with_cwes_and_source():
         assert [c.id for c in row.cwes] == ["CWE-79"]
 
         ts_row = (
-            await session.execute(
-                select(ThreatSource).where(ThreatSource.threat_id == row.id)
-            )
+            await session.execute(select(ThreatSource).where(ThreatSource.threat_id == row.id))
         ).scalar_one()
         assert ts_row.external_id == "CVE-2021-44228"
         assert ts_row.affected_products == ["cpe:2.3:a:apache:log4j:2.0:*"]

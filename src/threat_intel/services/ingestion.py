@@ -117,9 +117,7 @@ class IngestionService:
             # --- Update CollectorRun row ---
             async with self._sf() as session:
                 run_row = (
-                    await session.execute(
-                        select(CollectorRun).where(CollectorRun.id == run_id)
-                    )
+                    await session.execute(select(CollectorRun).where(CollectorRun.id == run_id))
                 ).scalar_one()
                 run_row.finished_at = finished_at
                 run_row.status = final_status
@@ -187,9 +185,7 @@ class IngestionService:
             # --- Update CollectorRun row with failure ---
             async with self._sf() as session:
                 run_row = (
-                    await session.execute(
-                        select(CollectorRun).where(CollectorRun.id == run_id)
-                    )
+                    await session.execute(select(CollectorRun).where(CollectorRun.id == run_id))
                 ).scalar_one()
                 run_row.finished_at = failed_at
                 run_row.status = CollectorRunStatus.failure
@@ -208,9 +204,7 @@ class IngestionService:
                 ).scalar_one()
                 src.consecutive_failures += 1
                 if src.consecutive_failures >= 3:
-                    src.current_interval_minutes = min(
-                        src.current_interval_minutes * 2, 1440
-                    )
+                    src.current_interval_minutes = min(src.current_interval_minutes * 2, 1440)
                 src.last_error = error_msg
                 src.next_run_at = failed_at + timedelta(minutes=src.current_interval_minutes)
                 src.last_run_at = failed_at
