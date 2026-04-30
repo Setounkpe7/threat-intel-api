@@ -10,6 +10,7 @@ from threat_intel.models.cwe import threat_cwe
 
 if TYPE_CHECKING:
     from threat_intel.models.cwe import CWE
+    from threat_intel.models.threat_indicator import ThreatIndicator
     from threat_intel.models.threat_source import ThreatSource
 
 
@@ -39,3 +40,4 @@ class Threat(Base, TimestampMixin):
 
     cwes: Mapped[list["CWE"]] = relationship(secondary=threat_cwe, lazy="selectin")
     sources: Mapped[list["ThreatSource"]] = relationship(back_populates="threat", lazy="selectin")
+    indicators: Mapped[list["ThreatIndicator"]] = relationship(lazy="selectin")
