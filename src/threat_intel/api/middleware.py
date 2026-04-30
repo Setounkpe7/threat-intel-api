@@ -17,20 +17,30 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-# CSP tuned for FastAPI: the only HTML route is /docs (Swagger UI) which
-# loads JS/CSS/font from jsdelivr and inline-styles its own page.
-_DEFAULT_CSP = (
-    "default-src 'self'; "
-    "img-src 'self' data: https://fastapi.tiangolo.com; "
-    "script-src 'self' https://cdn.jsdelivr.net; "
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    "font-src 'self' https://cdn.jsdelivr.net; "
-    "connect-src 'self'; "
-    "frame-ancestors 'none'; "
-    "base-uri 'self'; "
-    "form-action 'self'; "
-    "object-src 'none'"
-)
+
+# CSP tuned for FastAPI: the only HTML routes are /docs (Swagger UI) and
+# /redoc, both loading JS/CSS/font from jsdelivr. Swagger UI also needs
+# an inline initializer script — that one carries a per-request nonce
+# (see `api/docs.py`) so we never ship 'unsafe-inline' for script-src.
+def build_csp(nonce: str | None = None) -> str:
+    script_src = "'self' https://cdn.jsdelivr.net"
+    if nonce is not None:
+        script_src = f"'self' 'nonce-{nonce}' https://cdn.jsdelivr.net"
+    return (
+        "default-src 'self'; "
+        "img-src 'self' data: https://fastapi.tiangolo.com; "
+        f"script-src {script_src}; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "font-src 'self' https://cdn.jsdelivr.net; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "object-src 'none'"
+    )
+
+
+_DEFAULT_CSP = build_csp()
 
 # Keep this list small and focused — every entry is one fewer browser API
 # any compromised dependency can call from a /docs page.
