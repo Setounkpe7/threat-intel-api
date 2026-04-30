@@ -39,9 +39,7 @@ async def test_docs_csp_whitelists_the_inline_script_nonce(client):
         f"CSP does not whitelist the inline-script nonce. CSP={csp!r}, nonce={nonce!r}"
     )
     # script-src must not silently re-open the floodgates.
-    script_src = next(
-        (d.strip() for d in csp.split(";") if d.strip().startswith("script-src")), ""
-    )
+    script_src = next((d.strip() for d in csp.split(";") if d.strip().startswith("script-src")), "")
     assert "'unsafe-inline'" not in script_src
     assert "'unsafe-eval'" not in script_src
 
