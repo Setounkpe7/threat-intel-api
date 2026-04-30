@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
+from threat_intel.api.docs import router as docs_router
 from threat_intel.api.health import router as health_router
 from threat_intel.api.middleware import SecurityHeadersMiddleware
 from threat_intel.api.security import limiter
@@ -157,6 +158,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="CyberThreat Intelligence API",
         version="0.2.0",
         lifespan=lifespan,
+        # /docs is served by `docs_router` with a per-request CSP nonce.
+        docs_url=None,
     )
 
     app.state.settings = settings  # also exposed by lifespan but available at startup
@@ -198,6 +201,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def _generic(_: Request, exc: ThreatIntelException) -> JSONResponse:
         return _problem(HTTP_500_INTERNAL_SERVER_ERROR, "Internal error", str(exc))
 
+    app.include_router(docs_router)
     app.include_router(health_router)
     app.include_router(api_v1)
 
