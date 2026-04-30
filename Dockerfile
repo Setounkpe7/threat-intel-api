@@ -93,9 +93,10 @@ EXPOSE 8000
 # tini reaps zombies and forwards signals to uvicorn (clean SIGTERM on `docker stop`).
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# 3-second timeout per spec; start period leaves room for the alembic migration
-# that runs as part of the start command.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
-    CMD curl --fail --silent --show-error --max-time 2 http://127.0.0.1:8000/health || exit 1
+# Migrations no longer run in CMD: in production they run as a Railway
+# pre-deploy command, in local docker-compose they run via the dedicated
+# 'migrate' one-shot service. So the start period can be shorter.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl --fail --silent --show-error --max-time 2 http://127.0.0.1:8000/livez || exit 1
 
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn threat_intel.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["uvicorn", "threat_intel.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
