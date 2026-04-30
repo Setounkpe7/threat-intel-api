@@ -12,6 +12,7 @@ from threat_intel.models.sector_profile import SectorProfile
 from threat_intel.models.sector_score import ThreatSectorScore
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
+from threat_intel.models.threat_source import ThreatSource
 
 
 @pytest_asyncio.fixture
@@ -27,24 +28,36 @@ async def security_seed(factory):
 
         threats: list[Threat] = []
         for i, sev in enumerate([Severity.critical, Severity.high]):
+            tid = uuid.uuid4()
+            pub_at = now - timedelta(hours=2)
             t = Threat(
-                id=uuid.uuid4(),
-                source_id=src.id,
-                external_id=f"CVE-2026-{2000 + i}",
+                id=tid,
+                threat_type="cve",
                 title=f"Sample threat {i}",
-                description="payment processing flaw",
+                summary="payment processing flaw",
                 severity=sev,
                 cvss_score=8.5,
                 cvss_vector="CVSS:3.1/X",
                 cvss_version="3.1",
-                affected_products=["cpe:2.3:a:apache:tomcat"],
-                references=[],
-                published_at=now - timedelta(hours=2),
-                last_modified_at=now - timedelta(hours=2),
-                raw_data={},
+                tags=[],
+                published_at=pub_at,
+                last_modified_at=pub_at,
                 cwes=[cwe] if i == 0 else [],
             )
             s.add(t)
+            await s.flush()
+            ts = ThreatSource(
+                threat_id=tid,
+                source_id=src.id,
+                external_id=f"CVE-2026-{2000 + i}",
+                first_seen_at=pub_at,
+                last_seen_at=pub_at,
+                tags=["nvd"],
+                affected_products=["cpe:2.3:a:apache:tomcat"],
+                references=[],
+                raw_data={},
+            )
+            s.add(ts)
             threats.append(t)
 
         s.add(

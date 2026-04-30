@@ -95,9 +95,31 @@ class SourceKind(StrEnum):
     advisory = "advisory"
 
 
+class IndicatorType(StrEnum):
+    cve = "cve"
+    ghsa = "ghsa"
+    cpe = "cpe"
+    package = "package"
+    ip = "ip"
+    domain = "domain"
+    url = "url"
+    md5 = "md5"
+    sha1 = "sha1"
+    sha256 = "sha256"
+
+
+class CollectorRunStatus(StrEnum):
+    running = "running"
+    success = "success"
+    failure = "failure"
+    partial = "partial"
+
+
 __all__ = [
     "Base",
+    "CollectorRunStatus",
     "GUID",
+    "IndicatorType",
     "Severity",
     "SourceKind",
     "TimestampMixin",

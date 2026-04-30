@@ -13,23 +13,20 @@ from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
 
 
-async def _make_threat(session, source_id):
+async def _make_threat(session, source_id=None):
     now = datetime.now(UTC)
     threat = Threat(
         id=uuid.uuid4(),
-        source_id=source_id,
-        external_id="CVE-TEST-1",
+        threat_type="cve",
         title="t",
-        description="d",
+        summary="d",
         severity=Severity.high,
         cvss_score=8.0,
         cvss_vector="CVSS:3.1/AV:N",
         cvss_version="3.1",
-        affected_products=[],
-        references=[],
+        tags=[],
         published_at=now,
         last_modified_at=now,
-        raw_data={},
     )
     session.add(threat)
     await session.flush()

@@ -1,3 +1,5 @@
+"""Unit tests for the Threat ORM model (M3a schema)."""
+
 import uuid
 from datetime import UTC, datetime
 
@@ -7,14 +9,14 @@ from sqlalchemy.orm import selectinload
 
 from threat_intel.core.db import build_engine, session_factory
 from threat_intel.models.base import Base, Severity, SourceKind
-from threat_intel.models.cve import CVE
 from threat_intel.models.cwe import CWE
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
+from threat_intel.models.threat_source import ThreatSource
 
 
 @pytest.mark.asyncio
-async def test_threat_with_cve_and_cwes():
+async def test_threat_with_cwes_and_source():
     engine = build_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -32,41 +34,49 @@ async def test_threat_with_cve_and_cwes():
 
         threat = Threat(
             id=uuid.uuid4(),
-            source_id=src.id,
-            external_id="CVE-2026-1",
-            title="t",
-            description="d",
-            severity=Severity.high,
-            cvss_score=8.1,
-            cvss_vector="CVSS:3.1/AV:N",
+            threat_type="cve",
+            title="Log4Shell RCE",
+            summary="Remote code execution via JNDI lookup",
+            severity=Severity.critical,
+            cvss_score=10.0,
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
             cvss_version="3.1",
-            affected_products=["cpe:2.3:a:vendor:product:1.0"],
-            references=["https://example.test/x"],
+            tags=["nvd"],
             published_at=now,
             last_modified_at=now,
-            raw_data={"cve": {"id": "CVE-2026-1"}},
             cwes=[cwe],
         )
         session.add(threat)
+        await session.flush()
 
-        cve_idx = CVE(cve_id="CVE-2026-1", threat_id=threat.id)
-        session.add(cve_idx)
+        ts = ThreatSource(
+            threat_id=threat.id,
+            source_id=src.id,
+            external_id="CVE-2021-44228",
+            first_seen_at=now,
+            last_seen_at=now,
+            tags=["nvd"],
+            affected_products=["cpe:2.3:a:apache:log4j:2.0:*"],
+            references=["https://example.test/advisory"],
+            raw_data={"cvss_score": 10.0},
+        )
+        session.add(ts)
         await session.commit()
 
     async with factory() as session:
         stmt = (
-            select(Threat)
-            .options(selectinload(Threat.cwes))
-            .where(Threat.external_id == "CVE-2026-1")
+            select(Threat).options(selectinload(Threat.cwes)).where(Threat.title == "Log4Shell RCE")
         )
         row = (await session.execute(stmt)).scalar_one()
-        assert row.cvss_score == 8.1
-        assert row.affected_products == ["cpe:2.3:a:vendor:product:1.0"]
+        assert row.cvss_score == 10.0
+        assert row.threat_type == "cve"
+        assert "nvd" in row.tags
         assert [c.id for c in row.cwes] == ["CWE-79"]
 
-        cve_row = (
-            await session.execute(select(CVE).where(CVE.cve_id == "CVE-2026-1"))
+        ts_row = (
+            await session.execute(select(ThreatSource).where(ThreatSource.threat_id == row.id))
         ).scalar_one()
-        assert cve_row.threat_id == row.id
+        assert ts_row.external_id == "CVE-2021-44228"
+        assert ts_row.affected_products == ["cpe:2.3:a:apache:log4j:2.0:*"]
 
     await engine.dispose()
