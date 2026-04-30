@@ -5,11 +5,11 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from threat_intel.analyzers.dedup import upsert_threat
 from threat_intel.collectors.base import BaseCollector
 from threat_intel.core.exceptions import ConfigurationError
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
+from threat_intel.services.ingest import IngestService
 from threat_intel.services.scoring_job import ThreatScoringJob
 
 logger = structlog.get_logger(__name__)
@@ -34,6 +34,7 @@ class IngestionService:
         self._collectors = {c.source_name: c for c in collectors}
         self._batch_size = batch_size
         self._scoring_job = scoring_job
+        self._ingest = IngestService(session_factory)
 
     async def run(self, source_name: str) -> IngestionResult:
         collector = self._collectors.get(source_name)
@@ -65,24 +66,22 @@ class IngestionService:
                 src_id = src.id
                 await session.commit()
 
-                count = 0
-                async for raw in collector.fetch(since):
-                    draft = collector.normalize(raw)
-                    outcome = await upsert_threat(session, src, draft)
-                    if outcome == "inserted":
-                        result.inserted += 1
-                    elif outcome == "updated":
-                        result.updated += 1
-                    else:
-                        result.unchanged += 1
-                    count += 1
-                    if count % self._batch_size == 0:
-                        await session.commit()
-                await session.commit()
+            async for raw in collector.fetch(since):
+                event = collector.to_event(raw)
+                outcome, _ = await self._ingest.process(event, src_id)
+                if outcome == "created":
+                    result.inserted += 1
+                elif outcome == "updated":
+                    result.updated += 1
 
+            async with self._sf() as session:
+                src = (
+                    await session.execute(select(Source).where(Source.name == source_name))
+                ).scalar_one()
                 src.last_success_at = datetime.now(UTC)
                 src.last_error = None
                 await session.commit()
+
             log.info(
                 "ingestion.done",
                 inserted=result.inserted,
@@ -96,7 +95,6 @@ class IngestionService:
                         (
                             await session.execute(
                                 select(Threat.id).where(
-                                    Threat.source_id == src_id,
                                     Threat.updated_at >= run_started,
                                 )
                             )
