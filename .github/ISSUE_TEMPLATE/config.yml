@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Setounkpe7/threat-intel-api/security/advisories/new
+    about: "Report a vulnerability privately. Do not file a public issue."
+  - name: Live API
+    url: https://threat-intel-api-production.up.railway.app/docs
+    about: "Open the Swagger UI of the production deployment."

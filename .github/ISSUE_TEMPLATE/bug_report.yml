@@ -1,0 +1,67 @@
+name: Bug report
+description: Something is wrong with the API, the ingestion pipeline, or scoring.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug.
+        **Do not report security issues here** — see [SECURITY.md](../../SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `curl $HOST/health` (`version` field) or the commit hash you reproduced on.
+      placeholder: "0.1.0 / 96080d7"
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Local (Docker Compose)
+        - Local (Python venv + Postgres)
+        - Local (SQLite)
+        - Railway (production reference deployment)
+        - Other (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the bug.
+      placeholder: |
+        Calling /api/v1/sectors/finance/feed.rss returns 500 since I added a profile with...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal sequence — `curl` commands, profile YAML, env vars.
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: A few lines around the failure. Strip secrets first.
+      render: text
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and didn't find a duplicate.
+          required: true
+        - label: I'm not reporting a security vulnerability (those go to the address in SECURITY.md).
+          required: true
