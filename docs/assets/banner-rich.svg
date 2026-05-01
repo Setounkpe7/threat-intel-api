@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="threat-intel-api banner">
+  <defs>
+    <linearGradient id="bgRich" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A0E1A"/>
+      <stop offset="60%" stop-color="#0F1530"/>
+      <stop offset="100%" stop-color="#1A0833"/>
+    </linearGradient>
+    <linearGradient id="cyanViolet" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="100%" stop-color="#9D00FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#00D4FF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f2a4a" stroke-width="0.5" opacity="0.4"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgRich)"/>
+  <rect width="1200" height="300" fill="url(#grid)"/>
+  <circle cx="220" cy="150" r="180" fill="url(#glow)"/>
+
+  <g transform="translate(220 150)" opacity="0.55">
+    <circle r="40" fill="none" stroke="#00D4FF" stroke-width="1"/>
+    <circle r="70" fill="none" stroke="#00D4FF" stroke-width="1" opacity="0.7"/>
+    <circle r="100" fill="none" stroke="#00D4FF" stroke-width="1" opacity="0.45"/>
+    <circle r="130" fill="none" stroke="#9D00FF" stroke-width="1" opacity="0.3"/>
+  </g>
+
+  <g transform="translate(220 150)">
+    <path d="M 0 -70 L 55 -50 L 55 18 C 55 50 30 70 0 80 C -30 70 -55 50 -55 18 L -55 -50 Z"
+          fill="none" stroke="url(#cyanViolet)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M 0 -55 L 42 -38 L 42 14 C 42 40 22 56 0 64 C -22 56 -42 40 -42 14 L -42 -38 Z"
+          fill="#00D4FF" fill-opacity="0.08"/>
+    <circle r="14" fill="none" stroke="#00D4FF" stroke-width="2"/>
+    <line x1="-22" y1="0" x2="-16" y2="0" stroke="#00D4FF" stroke-width="2"/>
+    <line x1="16" y1="0" x2="22" y2="0" stroke="#00D4FF" stroke-width="2"/>
+    <line x1="0" y1="-22" x2="0" y2="-16" stroke="#00D4FF" stroke-width="2"/>
+    <line x1="0" y1="16" x2="0" y2="22" stroke="#00D4FF" stroke-width="2"/>
+    <circle r="3" fill="#9D00FF"/>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#E6F0FF">
+    <text x="430" y="135" font-size="56" font-weight="700" letter-spacing="-1.5">
+      threat-intel-api
+    </text>
+    <text x="432" y="178" font-size="22" font-weight="400" fill="#8FA9D9" letter-spacing="0">
+      sector-aware OSINT vulnerability intelligence
+    </text>
+    <g font-size="13" fill="#00D4FF" letter-spacing="2">
+      <text x="432" y="220">FASTAPI</text>
+      <text x="520" y="220">·</text>
+      <text x="540" y="220">POSTGRES</text>
+      <text x="650" y="220">·</text>
+      <text x="670" y="220">DOCKER</text>
+      <text x="760" y="220">·</text>
+      <text x="780" y="220" fill="#9D00FF">DEVSECOPS</text>
+    </g>
+  </g>
+
+  <g font-family="ui-monospace, monospace" font-size="12" fill="#5B7AB0">
+    <rect x="950" y="240" width="220" height="36" rx="6" fill="#0F1530" stroke="#1f2a4a"/>
+    <circle cx="965" cy="258" r="4" fill="#00D4FF"/>
+    <text x="978" y="262" fill="#E6F0FF">27,695 CVEs · 6 sectors</text>
+  </g>
+</svg>
