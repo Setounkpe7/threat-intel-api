@@ -209,7 +209,7 @@ Schema and worked examples: [`profiles/README.md`](profiles/README.md), scoring 
 
 ## Security & DevSecOps
 
-The CI security gate runs **seven jobs on every PR**, and all of them are blocking.
+The CI security gate runs on every PR and every job below is blocking. As of this writing the gate spans nine sub-jobs plus an umbrella status check on `main` and `dev`.
 
 ### Static analysis (SAST)
 
