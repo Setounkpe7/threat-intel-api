@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -19,6 +19,7 @@ from threat_intel.api.health import router as health_router
 from threat_intel.api.middleware import SecurityHeadersMiddleware
 from threat_intel.api.security import limiter
 from threat_intel.api.v1 import api_v1
+from threat_intel.collectors.base import BaseCollector
 from threat_intel.collectors.cisa_kev import CISAKEVCollector
 from threat_intel.collectors.github_advisories import GitHubAdvisoriesCollector
 from threat_intel.collectors.nvd import NVDCollector
@@ -89,6 +90,25 @@ async def _ensure_source_row(
             await s.commit()
 
 
+async def _sync_source_enabled_state(
+    session: AsyncSession,
+    collectors: Iterable[BaseCollector],
+) -> None:
+    # Bidirectional: must re-enable too. Otherwise a token-less startup disables
+    # the row and a later token + redeploy never lifts the scheduler's filter.
+    for c in collectors:
+        src = (
+            await session.execute(select(Source).where(Source.name == c.source_name))
+        ).scalar_one_or_none()
+        if src is None:
+            continue
+        if src.enabled != c.enabled:
+            src.enabled = c.enabled
+            event = "collector.enabled_at_startup" if c.enabled else "collector.disabled_at_startup"
+            logger.info(event, source=c.source_name)
+    await session.commit()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(
@@ -125,17 +145,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             factory, "github_advisories", SourceKind.advisory, "https://api.github.com/graphql"
         )
 
-        # Sync Source.enabled in DB for any disabled collectors
         async with factory() as session:
-            for c in collectors:
-                if not c.enabled:
-                    src = (
-                        await session.execute(select(Source).where(Source.name == c.source_name))
-                    ).scalar_one_or_none()
-                    if src and src.enabled:
-                        src.enabled = False
-                        logger.info("collector.disabled_at_startup", source=c.source_name)
-            await session.commit()
+            await _sync_source_enabled_state(session, collectors)
 
         profile_loader = SectorProfileLoader(
             session_factory=factory, profiles_root=settings.profiles_path
