@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest a new endpoint, collector, scoring rule, or sector profile.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What use case is the API missing today? Be concrete — "I'm trying to do X and the available endpoints don't let me."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like the API to behave? Sketch the endpoint, the YAML field, or the scoring rule.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways to solve the same problem, and why you ruled them out.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Surface area
+      multiple: true
+      options:
+        - Public API (`/api/v1/...`)
+        - Admin API (`/api/v1/admin/...`)
+        - New collector / data source
+        - Scoring engine / sector profiles
+        - CLI (`threat_intel.cli.*`)
+        - Documentation only
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and didn't find a duplicate.
+          required: true
