@@ -2,7 +2,7 @@
 # ---------- Stage 1: builder ----------
 # Builds the venv against the pinned requirements.lock so the runtime image
 # never sees a compiler, source tree, or pip cache.
-FROM python:3.12-alpine AS builder
+FROM python:3.14-alpine AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -41,7 +41,7 @@ RUN /opt/venv/bin/pip uninstall -y pip setuptools wheel || true \
 
 
 # ---------- Stage 2: runtime ----------
-FROM python:3.12-alpine AS runtime
+FROM python:3.14-alpine AS runtime
 
 ARG GIT_SHA=unknown
 ARG BUILD_DATE=unknown
