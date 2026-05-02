@@ -1,231 +1,315 @@
-# CyberThreat Intelligence API
+<p align="center">
+  <img src="docs/assets/banner-rich.svg" alt="threat-intel-api" width="100%"/>
+</p>
 
-[![security](https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml)
-[![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)](#development)
-[![python](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/downloads/release/python-3120/)
-[![image size](https://img.shields.io/badge/docker-195MB-blue)](Dockerfile)
-[![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
+<h1 align="center">threat-intel-api</h1>
 
-A REST API that aggregates Open-Source Intelligence (OSINT) cyber-threat feeds from three sources — National Vulnerability Database (NVD), CISA Known Exploited Vulnerabilities (KEV), and GitHub Security Advisories (GHSA) — deduplicates them across sources, scores them against configurable **sector profiles**, and exposes the result via versioned endpoints. Milestone 1 shipped the ingestion pipeline for NVD plus three endpoints. Milestone 2 added sector-aware scoring, per-sector dashboards, RSS feeds, hot-reloadable YAML profiles, admin endpoints, and rate limiting. Milestone 3a adds multi-source ingestion with cross-feed deduplication and indicator-of-compromise (IOC) lookups. The current DevSecOps phase adds a hardened container, a CI/CD security gate, and a documented vulnerability disclosure path — see [SECURITY.md](SECURITY.md).
+<p align="center">
+  <strong>A sector-aware OSINT vulnerability intelligence API.</strong><br/>
+  Aggregates NVD, CISA KEV and GitHub Advisories, scores each CVE against
+  per-sector profiles, and exposes the result as JSON, RSS and a Swagger UI.
+</p>
 
-## Local install (no Docker)
+<p align="center">
+  <a href="https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml"><img alt="security gate" src="https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml/badge.svg?branch=main"/></a>
+  <img alt="coverage" src="https://img.shields.io/badge/coverage-86%25-brightgreen"/>
+  <img alt="trivy" src="https://img.shields.io/badge/trivy-CRITICAL%2BHIGH%200-brightgreen"/>
+  <img alt="python" src="https://img.shields.io/badge/python-3.12-blue"/>
+  <img alt="image size" src="https://img.shields.io/badge/docker-195MB%20alpine-blue"/>
+  <img alt="OWASP API Top 10" src="https://img.shields.io/badge/OWASP%20API%20Top%2010-mapped-9D00FF"/>
+  <img alt="Railway" src="https://img.shields.io/badge/deployed-Railway-9D00FF"/>
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-lightgrey"/>
+</p>
 
-Requires Python 3.12+.
+<p align="center">
+  <a href="https://threat-intel-api-production.up.railway.app/"><strong>Live API</strong></a>
+  ·
+  <a href="https://threat-intel-api-production.up.railway.app/docs"><strong>Swagger UI</strong></a>
+  ·
+  <a href="https://threat-intel-api-production.up.railway.app/api/v1/sectors/finance/dashboard"><strong>Finance dashboard (sample)</strong></a>
+</p>
 
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+---
 
-cp .env.example .env
-# Edit .env if needed (defaults work with docker-compose Postgres)
+## See it in 30 seconds
 
-# For local SQLite dev (no Docker), edit .env to use:
-#   DATABASE_URL=sqlite+aiosqlite:///./threat_intel.db
+<p align="center">
+  <img src="docs/assets/screenshots/hero-demo.gif" alt="Three curl calls against the live threat-intel-api: top finance threats, RSS feed, score breakdown" width="100%"/>
+</p>
 
-alembic upgrade head
-uvicorn threat_intel.main:app --reload
-```
+<p align="center"><em>Three curl calls against the live API: top finance threats, RSS subscription, audit-grade score breakdown. Rendered with <a href="https://github.com/charmbracelet/vhs">VHS</a> from <a href="docs/assets/hero-demo.tape"><code>docs/assets/hero-demo.tape</code></a>.</em></p>
 
-Open http://localhost:8000/docs for the interactive Swagger UI.
+The three calls below are the same ones the GIF runs.
 
-## Run with Docker
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-The `app` service waits for Postgres, runs migrations on startup, then serves uvicorn on port 8000.
-
-```bash
-curl localhost:8000/health
-```
-
-## Trigger an ingestion run on demand
-
-By default, NVD is polled every 60 minutes, CISA KEV every 6 hours, and GitHub Advisories every 2 hours, all driven by the in-process scheduler. To force a single run (useful in demos and the first time you bring the stack up):
+### Top 5 finance-relevant threats, last 24h
 
 ```bash
-docker compose exec app python -m threat_intel.cli.collect_once nvd
-docker compose exec app python -m threat_intel.cli.collect_once cisa_kev
-docker compose exec app python -m threat_intel.cli.collect_once github_advisories
+curl -s 'https://threat-intel-api-production.up.railway.app/api/v1/sectors/finance/dashboard' \
+  | jq '.top_24h[:5] | .[] | {cve: .external_id, score, cvss: .cvss_score, title: .title[0:80]}'
 ```
 
-You should see something like `inserted=27 updated=0 unchanged=0`.
+```json
+{
+  "cve": "CVE-2026-7579",
+  "score": 35.0,
+  "cvss": 7.3,
+  "title": "Hard-coded credentials in AstrBot dashboard auth (CWE-798)"
+}
+```
 
-## Sources
-
-The platform ingests threat intelligence from three feeds, each chosen for a complementary signal:
-
-| Source | Type | Frequency | Auth | What it adds |
-|---|---|---|---|---|
-| **National Vulnerability Database (NVD)** | REST/JSON | every 60 min | Optional `NVD_API_KEY` | Authoritative Common Vulnerability Scoring System (CVSS) scores, weakness identifiers (CWE), affected product list (CPE). The reference catalog. |
-| **CISA Known Exploited Vulnerabilities (KEV)** | REST/JSON | every 6 hours | None | Confirmed in-the-wild exploitation. The strongest signal in threat intelligence — if a vulnerability is on KEV, attackers are using it now. Tags: `kev`, `actively-exploited`, `ransomware` (when applicable). |
-| **GitHub Security Advisories (GHSA)** | GraphQL | every 2 hours | `GITHUB_TOKEN` (no scope required) | Open-source supply-chain angle. Maps each vulnerability to affected packages by ecosystem (`npm:lodash`, `pypi:requests`, `maven:org.apache.logging.log4j:log4j-core`, etc.). |
-
-When the same Common Vulnerabilities and Exposures identifier (CVE-ID) appears across multiple feeds, the platform stores **one** Threat record with several Source rows attached — see [`docs/COLLECTORS.md`](docs/COLLECTORS.md) for the architecture and [`docs/INDICATORS.md`](docs/INDICATORS.md) for the indicator-of-compromise (IOC) lookup model.
-
-## Endpoints
-
-### Public
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | service status, DB state, per-collector last-run, stats |
-| GET | `/api/v1/threats` | paginated list, filters: `severity`, `since`, `source`, `limit`, `offset` |
-| GET | `/api/v1/cve/{cve_id}` | full detail (incl. `raw_data`) for a CVE |
-| GET | `/api/v1/sectors` | list public sector profiles (`?visibility=all` requires `X-Admin-Key`) |
-| GET | `/api/v1/sectors/{id}` | profile detail (private profiles return 404 without `X-Admin-Key`) |
-| GET | `/api/v1/sectors/{id}/threats` | scored threats for a sector (`?min_score`, `?limit`, `?since`) |
-| GET | `/api/v1/sectors/{id}/dashboard` | top 24h / top 7d / aggregate stats |
-| GET | `/api/v1/sectors/{id}/feed.rss` | RSS 2.0 feed (default `min_score=70`) |
-| GET | `/api/v1/threats/{id}/sources` | all sources that document a given Threat |
-| GET | `/api/v1/sources` | global ingestion pipeline health (last-run, failure counts, enabled state) |
-| GET | `/api/v1/indicators` | reverse IOC lookup: `?type=cve&value=CVE-2021-44228` — see [`docs/INDICATORS.md`](docs/INDICATORS.md) |
-| GET | `/api/v1/stats/global` | aggregated stats for a future public dashboard |
-| GET | `/docs` | Swagger UI |
-| GET | `/openapi.json` | machine-readable schema |
-
-### Admin (require `X-Admin-Key` header)
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/admin/reload-profiles` | re-scan `profiles/` and upsert (returns added/updated/removed/errors) |
-| POST | `/api/v1/admin/rescore-all` | queue a full rescoring in background (returns 202) |
-
-Public endpoints are rate-limited to 100 requests/minute per IP (`RATE_LIMIT_DEFAULT`). Errors are returned as `application/problem+json` (RFC 7807).
-
-## Sector profiles
-
-Each `profiles/public/*.yaml` (and `profiles/private/*.yaml`) declares one sector profile — a bundle of keywords, technologies, CWE priorities, exclusions, compliance tags, and a CVSS threshold. Every threat is scored against every profile, so adding a YAML and hot-reloading is enough to expose a new dashboard, threats endpoint, and RSS feed.
-
-See [profiles/README.md](profiles/README.md) for the schema and [docs/SCORING.md](docs/SCORING.md) for the scoring algorithm with a worked example.
+### Subscribe a SIEM to the finance RSS feed
 
 ```bash
-# Add a profile
-$EDITOR profiles/public/my-org.yaml
-
-# Hot reload without restarting
-curl -X POST http://localhost:8000/api/v1/admin/reload-profiles \
-     -H "X-Admin-Key: $ADMIN_API_KEY"
-
-# Query the sector
-curl http://localhost:8000/api/v1/sectors/my-org/dashboard | jq
+curl 'https://threat-intel-api-production.up.railway.app/api/v1/sectors/finance/feed.rss?min_score=70'
 ```
 
-### Example: top-10 critical threats for finance
+### Inspect the score breakdown of a single CVE
 
 ```bash
-curl 'http://localhost:8000/api/v1/sectors/finance/threats?min_score=70&limit=10' | jq
+curl -s 'https://threat-intel-api-production.up.railway.app/api/v1/sectors/finance/dashboard' \
+  | jq '.top_24h[0].score_breakdown'
 ```
 
-### Example: subscribe to the RSS feed
-
-```bash
-curl 'http://localhost:8000/api/v1/sectors/finance/feed.rss?min_score=70' \
-  -H 'Accept: application/rss+xml'
+```json
+{
+  "cwe_match":      { "hit": true,  "matched": ["CWE-798"], "points": 20 },
+  "cvss_threshold": { "hit": true,  "threshold": 7.0,        "points": 15 },
+  "kev":            { "hit": false, "points": 0 },
+  "technology_match": { "hit": false, "matched": [], "points": 0 }
+}
 ```
 
-### Architecture
+Every score is auditable: you can always see why a CVE landed where it did.
+
+---
+
+## Why it exists
+
+A bank's security team and a hospital's IT team do not need the same threat feed, but they usually get the same one. NVD publishes around 150 CVEs a day. CISA KEV adds the subset attackers are actively using. GitHub Advisories covers the open-source supply chain. None of those feeds is wrong; none is targeted either.
+
+This API ingests the three sources, deduplicates across them, and scores each CVE against a YAML-defined **sector profile**: keywords, technology stack, weighted CWEs, exclusions, CVSS threshold. A finance team gets a feed weighted on payment rails and authentication. An industrial team gets one weighted on PLC vendors and ICS protocols.
+
+A SIEM, a SOAR, or a human analyst can consume the result without tuning the API itself, because all the tuning sits in version-controlled YAML.
+
+---
+
+## Features
+
+| | |
+|---|---|
+| **Multi-source ingestion** | NVD, CISA KEV and GitHub Advisories with cross-feed deduplication |
+| **Sector-aware scoring** | 6 public profiles (finance, healthcare, ICS, gov, SaaS, e-commerce) |
+| **Async pipeline** | `httpx` + `APScheduler`, field-level priority on conflicting sources |
+| **SIEM-ready feeds** | JSON, RSS 2.0, paginated and filterable |
+| **Hardened by default** | OWASP API Top 10, ASVS L2, CIS Docker; details in [SECURITY.md](SECURITY.md) |
+| **Hot-reload profiles** | drop a YAML, `POST /admin/reload-profiles`, picked up without restart |
+| **Auditable scoring** | every score includes a per-criterion breakdown |
+| **Per-sector dashboards** | top 24h, top 7d, aggregate stats per profile |
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    NVD[NVD feed] --> Ingest
-    KEV[CISA KEV feed] --> Ingest
-    GHSA[GitHub Advisories] --> Ingest
-    Ingest["IngestService<br/>(cross-source dedup)"] --> Threat[(threat + threat_source<br/>+ threat_indicator)]
-    Threat --> ScoringJob[SectorScoringService]
-    ProfileLoader[SectorProfileLoader] --> Profiles[(sector_profile)]
-    Profiles --> ScoringJob
-    ScoringJob --> Scores[(threat_sector_score)]
-    Scores --> API[FastAPI v1<br/>/threats /sources /indicators]
-    Threat --> API
+    subgraph Sources["OSINT sources"]
+        direction TB
+        NVD["NVD<br/>REST / JSON"]
+        KEV["CISA KEV<br/>REST / JSON"]
+        GHSA["GitHub Advisories<br/>GraphQL"]
+    end
+
+    subgraph Pipeline["Ingestion &amp; scoring"]
+        direction TB
+        Ingest["IngestService<br/>cross-source dedup"]
+        YAML["profiles/*.yaml<br/>hot-reloadable"]
+        Loader["SectorProfileLoader"]
+        Scoring["SectorScoringService"]
+    end
+
+    subgraph Storage["PostgreSQL"]
+        direction TB
+        DB[("threat,<br/>threat_source,<br/>threat_indicator")]
+        Scores[("threat_sector_score")]
+    end
+
+    API["FastAPI v1"]
+    Consumers(["SIEM / SOAR / analyst"])
+
+    NVD -->|"httpx, 60 min"| Ingest
+    KEV -->|"httpx, 6 h"| Ingest
+    GHSA -->|"httpx, 2 h"| Ingest
+    Ingest -->|"SQLAlchemy 2.0"| DB
+    YAML --> Loader
+    Loader --> Scoring
+    DB --> Scoring
+    Scoring --> Scores
+    DB --> API
+    Scores --> API
+    API --> Consumers
 ```
 
-## Project layout
+Detailed component docs: [`docs/COLLECTORS.md`](docs/COLLECTORS.md), [`docs/SCORING.md`](docs/SCORING.md), [`docs/INDICATORS.md`](docs/INDICATORS.md).
 
-```
-src/threat_intel/
-├── api/                 FastAPI routers (health, v1.threats, v1.cve, v1.indicators, v1.sources)
-├── collectors/          Source adapters (BaseCollector, NVDCollector, CISAKEVCollector, GitHubAdvisoriesCollector)
-├── analyzers/           Dedup, scoring (M2)
-├── services/            IngestService (cross-source dedup + field-level priority), query layer
-├── schemas/             Pydantic request/response models (incl. CollectedEvent)
-├── models/              SQLAlchemy ORM (threat, threat_source, threat_indicator)
-├── core/                Config, DB engine, logging, exceptions, scheduler
-├── cli/                 Typer commands for ops/demos
-└── main.py              create_app() + lifespan
-```
+---
 
-Tests live under `tests/unit/` and `tests/integration/`. Migrations are in `alembic/versions/`.
+## Stack
 
-## Adding a new collector
+| Layer | Tools |
+|---|---|
+| **Runtime** | Python 3.12, FastAPI, async/await, Uvicorn |
+| **Data** | PostgreSQL 16, SQLAlchemy 2.0, Alembic |
+| **Ingestion** | `httpx`, `respx` (tests), APScheduler |
+| **Validation** | Pydantic v2, RFC 7807 problem+json |
+| **DevSecOps** | Bandit, Semgrep, Ruff, mypy strict, pip-audit, Trivy, Hadolint, Gitleaks, CycloneDX SBOM |
+| **Observability** | structlog (JSON logs, PII scrubbing), Sentry, `/health` |
+| **Container** | Multi-stage Alpine, distroless-style runtime, non-root uid 1001, ~195 MB |
+| **CI/CD** | GitHub Actions (7-job security gate), branch-protected `main`, Railway deploy on merge |
 
-The whole point of `BaseCollector` is that adding a new source costs you a single file plus a registration. See [`docs/COLLECTORS.md`](docs/COLLECTORS.md) for a detailed authoring guide, field-level priority rules, the `CollectedEvent` contract, and a full checklist.
+---
 
-Quick summary:
-1. **Pick a base class** — REST/JSON → `APIRestCollector`, GraphQL → `APIGraphQLCollector`.
-2. **Create the file** at `src/threat_intel/collectors/<source>.py`. Set `source_name`, `source_kind`, and `base_interval_minutes`. Implement `fetch(since)` and `to_event(raw)`.
-3. **Register it** in `src/threat_intel/main.py` alongside the other collectors.
-4. **Add unit tests** under `tests/unit/collectors/test_<source>.py` with a `respx`-stubbed happy path and a `to_event` mapping table.
-
-Dedup, persistence, API exposure, and `/health` reporting all come for free — they key off `source_name` + `external_id`.
-
-## Development
+## Quick start
 
 ```bash
-pytest               # full suite
-ruff check src tests # lint
-ruff format src tests
-mypy src             # static types
+git clone https://github.com/Setounkpe7/threat-intel-api.git
+cd threat-intel-api
+docker compose up --build
 ```
 
-### Pre-commit hooks
+Then `curl localhost:8000/health` and open `http://localhost:8000/docs`.
 
-Every commit runs lint, type check, SAST (bandit), and a secret scan (gitleaks). Install once after cloning:
+Full setup (local Python venv, SQLite mode, env reference, troubleshooting) lives in [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
+
+API guide with worked examples: [`docs/API_USAGE.md`](docs/API_USAGE.md).
+
+---
+
+## Sector profiles
+
+Each profile is one YAML file. Drop it in `profiles/public/` and hit the reload endpoint. The new dashboard, threats endpoint and RSS feed appear without restarting the API or running a migration.
+
+```yaml
+# profiles/public/finance.yaml (excerpt)
+id: finance
+name: Finance & Banking
+sector: financial-services
+keywords: [swift, iso20022, pci-dss, banking, payment-rail]
+technologies: [oracle-database, ibm-mq, kafka, kubernetes]
+cwe_priorities:
+  CWE-798: 20   # hard-coded credentials
+  CWE-89:  18   # SQL injection
+  CWE-287: 16   # improper authentication
+cvss_threshold: 7.0
+priority_boost: [kev, actively-exploited]
+```
+
+Schema and worked examples: [`profiles/README.md`](profiles/README.md), scoring algorithm: [`docs/SCORING.md`](docs/SCORING.md).
+
+---
+
+## Security & DevSecOps
+
+The CI security gate runs on every PR and every job below is blocking. As of this writing the gate spans nine sub-jobs plus an umbrella status check on `main` and `dev`.
+
+### Static analysis (SAST)
+
+- **Bandit** — Python AST audit (CWE coverage tuned for web)
+- **Semgrep** — pattern rules including OWASP Top 10
+- **Ruff** with security ruleset
+- **mypy** — strict mode on `src/`
+
+### Dependency security (SCA)
+
+- **pip-audit** — runtime CVE scan against `requirements.lock`
+- **Dependabot** — weekly updates, grouped, auto-merged on green
+- **CycloneDX SBOM** — generated and attached to release artifacts
+
+### Container security
+
+- Multi-stage build, runtime image without `pip` / `setuptools` / `wheel`
+- Non-root user (uid 1001) by default
+- **Hadolint** lints the Dockerfile in CI
+- **Trivy** image scan; CRITICAL+HIGH count must be 0
+- Image is signed with **Sigstore cosign** (keyless, OIDC-bound)
+
+### Runtime security
+
+- Security headers middleware (CSP, HSTS, frame-deny, content-type-options)
+- Per-IP rate limiter, configurable, with `Retry-After`
+- Structured JSON logs with PII scrubbing
+- **Sentry** for error capture, environment-tagged
+- Errors served as RFC 7807 `application/problem+json` (no stack traces leaked)
+
+### Compliance & standards
+
+- **OWASP API Security Top 10** — controls mapped per item in [`docs/SECURITY.md`](docs/SECURITY.md)
+- **OWASP ASVS Level 2** — gap analysis tracked in repo
+- **NIST SSDF** — practices PO/PS/PW/RV mapped to repo features
+- **CIS Docker Benchmark** — Dockerfile reviewed against the relevant items
+- **Coordinated disclosure policy** — see [`SECURITY.md`](SECURITY.md)
+
+---
+
+## Project metrics
+
+Snapshot from the live deployment (2026-05-01):
+
+| Metric | Value |
+|---|---|
+| Total CVEs in database | **27,695** |
+| New CVEs ingested last 24h | 273 |
+| Sources integrated | 3 (NVD + CISA KEV active in production, GHSA in stabilization) |
+| Sector profiles available | 6 public |
+| Endpoints | 13 (11 public + 2 admin) |
+| Python LOC (`src/`) | ~4,540 |
+| Tests | 92 (unit + integration) |
+| Test coverage gate | ≥ 80% |
+| Container image | 195 MB Alpine, non-root |
+| `/health` latency (remote client) | p50 ≈ 310 ms · p95 ≈ 410 ms (100 samples, includes DB round-trip) |
+
+---
+
+## Roadmap
+
+- [x] M1 — NVD ingestion, schema, core API
+- [x] M2 — Sector-aware scoring, dashboards, RSS, hot-reload, admin endpoints, rate limiting
+- [x] M3 — Production deploy on Railway with security gate
+- [x] M3a — Multi-source ingestion (CISA KEV + GHSA), cross-source dedup, IOC lookups
+- [ ] M3b — GHSA collector stabilization, additional IOC source types
+- [ ] M4 — Webhook alerting on critical threats
+- [ ] M5 — STIX 2.1 / TAXII export
+- [ ] M6 — NLP-based indicator extraction (spaCy)
+- [ ] M7 — Public web dashboard frontend
+
+---
+
+## Contributing
+
+Issues and PRs are welcome. Conventions, dev setup, and commit format: [`CONTRIBUTING.md`](CONTRIBUTING.md). Behavior: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Release log: [`CHANGELOG.md`](CHANGELOG.md).
 
 ```bash
-pip install pre-commit            # or: pipx install pre-commit
-pre-commit install                # registers .git/hooks/pre-commit
-pre-commit run --all-files        # one-off run on the whole tree
+make lint typecheck test    # the same gates CI runs on a PR
+make security-audit         # bandit + pip-audit + semgrep, locally
 ```
 
-The configuration lives in [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Hooks: ruff (lint + format), mypy strict, bandit, gitleaks, plus the standard whitespace / private-key / large-file guards.
+---
 
-## Security
+## Author
 
-| Area              | Where                                                          |
-|-------------------|----------------------------------------------------------------|
-| Disclosure policy | [SECURITY.md](SECURITY.md) — email contact + scope             |
-| Implemented controls | [docs/SECURITY.md](docs/SECURITY.md) — OWASP API Top 10 mapping |
-| Local audit       | `make security-audit` (bandit + pip-audit + semgrep)           |
-| CI gate           | [security.yml](.github/workflows/security.yml) — 7 jobs, must all pass to merge |
-| Container         | Hardened multi-stage Alpine image, non-root uid 1001, ~195 MB  |
+Built by **Michel-Ange Doubogan** (cybersecurity, Python).
+[LinkedIn](https://www.linkedin.com/in/michel-ange-doubogan-0731a4129/) · [Portfolio case study](https://github.com/Setounkpe7/find-one-devsecops-case-study)
 
-Quick checks:
+---
 
-```bash
-make lint                 # ruff + ruff-format
-make typecheck            # mypy strict on src/
-make test                 # pytest with --cov-fail-under=80
-make security-audit       # bandit + pip-audit + semgrep
-make docker-build         # build hardened image
-make docker-scan          # hadolint + trivy (CRITICAL+HIGH)
-```
+## License & acknowledgments
 
-## Deployment
+Licensed under MIT. See [`LICENSE`](LICENSE).
 
-Production runs on [Railway](https://railway.app), with a managed Postgres add-on. A push on `main` triggers an auto-deploy; the only path to `main` is a PR with a green security gate, so unsafe code can't reach prod by construction.
+Threat intelligence data is sourced from public OSINT feeds: the **National Vulnerability Database** (NIST), the **CISA Known Exploited Vulnerabilities catalog**, and the **GitHub Security Advisory Database**. This project is not affiliated with any of them. CVE® is a registered trademark of MITRE.
 
-Operator runbook: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Covers first-time setup, the deploy flow, rollback, secrets rotation, and troubleshooting.
-
-## Deliberately out of scope for M3a
-
-- RSS feeds and other heterogeneous IOC source types (planned for M3b)
-- Webhooks for real-time alerting (M4)
-- STIX/TAXII export — structured threat-information formats used in enterprise security toolchains
-- Natural-language extraction of indicators from unstructured text
-- Public dashboard frontend (M6)
-
-The data model and collector interface are designed so each of those lands without breaking what's here.
+<!--
+Suggested GitHub topics (paste in repo settings → About → Topics):
+fastapi, python, cybersecurity, threat-intelligence, vulnerability-management,
+osint, devsecops, owasp-api-top-10, cve, cisa-kev, sbom, sigstore, postgresql,
+docker, alpine, railway, sector-aware, security-automation, sast, sca
+-->

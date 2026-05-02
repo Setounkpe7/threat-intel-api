@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -14,11 +14,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
+from threat_intel import __version__
 from threat_intel.api.docs import router as docs_router
 from threat_intel.api.health import router as health_router
 from threat_intel.api.middleware import SecurityHeadersMiddleware
 from threat_intel.api.security import limiter
 from threat_intel.api.v1 import api_v1
+from threat_intel.collectors.base import BaseCollector
 from threat_intel.collectors.cisa_kev import CISAKEVCollector
 from threat_intel.collectors.github_advisories import GitHubAdvisoriesCollector
 from threat_intel.collectors.nvd import NVDCollector
@@ -56,8 +58,6 @@ def _init_sentry(settings: Settings) -> None:
     from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.starlette import StarletteIntegration
 
-    from threat_intel import __version__
-
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
         environment=settings.sentry_environment,
@@ -87,6 +87,25 @@ async def _ensure_source_row(
         if existing is None:
             s.add(Source(name=name, kind=kind, url=url, enabled=True))
             await s.commit()
+
+
+async def _sync_source_enabled_state(
+    session: AsyncSession,
+    collectors: Iterable[BaseCollector],
+) -> None:
+    # Bidirectional: must re-enable too. Otherwise a token-less startup disables
+    # the row and a later token + redeploy never lifts the scheduler's filter.
+    for c in collectors:
+        src = (
+            await session.execute(select(Source).where(Source.name == c.source_name))
+        ).scalar_one_or_none()
+        if src is None:
+            continue
+        if src.enabled != c.enabled:
+            src.enabled = c.enabled
+            event = "collector.enabled_at_startup" if c.enabled else "collector.disabled_at_startup"
+            logger.info(event, source=c.source_name)
+    await session.commit()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -125,17 +144,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             factory, "github_advisories", SourceKind.advisory, "https://api.github.com/graphql"
         )
 
-        # Sync Source.enabled in DB for any disabled collectors
         async with factory() as session:
-            for c in collectors:
-                if not c.enabled:
-                    src = (
-                        await session.execute(select(Source).where(Source.name == c.source_name))
-                    ).scalar_one_or_none()
-                    if src and src.enabled:
-                        src.enabled = False
-                        logger.info("collector.disabled_at_startup", source=c.source_name)
-            await session.commit()
+            await _sync_source_enabled_state(session, collectors)
 
         profile_loader = SectorProfileLoader(
             session_factory=factory, profiles_root=settings.profiles_path
@@ -181,7 +191,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="CyberThreat Intelligence API",
-        version="0.2.0",
+        version=__version__,
         lifespan=lifespan,
         # /docs is served by `docs_router` with a per-request CSP nonce.
         docs_url=None,
