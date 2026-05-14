@@ -10,8 +10,10 @@ Verifies:
 """
 
 import asyncio
+import tempfile
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest_asyncio
 from sqlalchemy import select
@@ -34,12 +36,20 @@ from threat_intel.services.ingestion import IngestionService
 
 @pytest_asyncio.fixture
 async def factory():
-    engine = build_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    sf = make_factory(engine)
-    yield sf
-    await engine.dispose()
+    # File-backed sqlite so concurrent connections from 3 collector tasks do
+    # not race on a single shared in-memory connection. The in-memory variant
+    # silently dropped writes under contention and left CollectorRun rows
+    # stuck at status="running".
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = Path(tmp) / "resilience.sqlite"
+        engine = build_engine(f"sqlite+aiosqlite:///{db_path}")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        sf = make_factory(engine)
+        try:
+            yield sf
+        finally:
+            await engine.dispose()
 
 
 async def _insert_source(factory, name: str) -> Source:
@@ -162,11 +172,30 @@ async def test_scheduler_tick_isolates_broken_collector(factory):
     # We must yield control so the tasks can run.
     await _scheduler_tick(ingestion=ingestion, session_factory=factory)
 
-    # Drain all pending tasks so the asyncio.create_task calls complete.
-    # gather with return_exceptions=True so we don't re-raise.
-    tasks = [t for t in asyncio.all_tasks() if not t.done() and t != asyncio.current_task()]
-    if tasks:
+    # Drain pending tasks in a loop: a captured task may spawn child tasks
+    # during its run that are not in our initial all_tasks() snapshot.
+    for _ in range(10):
+        tasks = [
+            t for t in asyncio.all_tasks() if not t.done() and t != asyncio.current_task()
+        ]
+        if not tasks:
+            break
         await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Even after all asyncio tasks complete, sqlite-in-memory contention can
+    # leave a final commit briefly invisible to a fresh session. Poll until
+    # all CollectorRun rows reach a terminal status, with a hard cap.
+    async def _all_terminal() -> bool:
+        async with factory() as s:
+            statuses = (await s.execute(select(CollectorRun.status))).scalars().all()
+            return len(statuses) == 3 and all(
+                st != CollectorRunStatus.running for st in statuses
+            )
+
+    for _ in range(50):  # up to ~2s total
+        if await _all_terminal():
+            break
+        await asyncio.sleep(0.04)
 
     # --- Assertions ---
     async with factory() as s:
