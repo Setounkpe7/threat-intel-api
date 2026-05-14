@@ -175,9 +175,7 @@ async def test_scheduler_tick_isolates_broken_collector(factory):
     # Drain pending tasks in a loop: a captured task may spawn child tasks
     # during its run that are not in our initial all_tasks() snapshot.
     for _ in range(10):
-        tasks = [
-            t for t in asyncio.all_tasks() if not t.done() and t != asyncio.current_task()
-        ]
+        tasks = [t for t in asyncio.all_tasks() if not t.done() and t != asyncio.current_task()]
         if not tasks:
             break
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -188,9 +186,7 @@ async def test_scheduler_tick_isolates_broken_collector(factory):
     async def _all_terminal() -> bool:
         async with factory() as s:
             statuses = (await s.execute(select(CollectorRun.status))).scalars().all()
-            return len(statuses) == 3 and all(
-                st != CollectorRunStatus.running for st in statuses
-            )
+            return len(statuses) == 3 and all(st != CollectorRunStatus.running for st in statuses)
 
     for _ in range(50):  # up to ~2s total
         if await _all_terminal():
