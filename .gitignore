@@ -29,3 +29,15 @@ profiles/private/
 
 # OS
 .DS_Store
+
+# Claude settings
+.claude
+
+# Graphify
+graphify-out/
+.graphify/
+*.graphify
+graphify.log
+
+# Communication assets (drafts not for repo)
+docs/communication/
