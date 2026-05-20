@@ -102,3 +102,8 @@ async def test_429_returns_problem_json_with_retry_after(tight_rate_limit_client
     assert retry_after is not None
     # Integer seconds (SIEMs handle this reliably; HTTP-date is also valid but we standardise)
     assert retry_after.isdigit()
+    # With a 1/minute limit, Retry-After must be in (0, 60] (not the
+    # hardcoded fallback). 60 exactly would suggest the handler fell
+    # through to the static default.
+    retry_after_int = int(retry_after)
+    assert 1 <= retry_after_int <= 60

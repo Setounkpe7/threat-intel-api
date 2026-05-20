@@ -1,4 +1,5 @@
 import contextlib
+import time
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -202,9 +203,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(RateLimitExceeded)
     def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-        # Must be sync: SlowAPIMiddleware.sync_check_limits falls back to the
-        # default _rate_limit_exceeded_handler if the registered handler is async.
-        retry_after = int(getattr(exc, "retry_after", None) or 60)
+        # Must be sync — SlowAPIMiddleware falls back to its plain-text default
+        # handler if the registered handler is async (inspect.iscoroutinefunction
+        # check in slowapi/middleware.py).
+        view_limit = getattr(request.state, "view_rate_limit", None)
+        retry_after = 60  # safe default if the limiter never populated request.state
+        if view_limit is not None:
+            # view_rate_limit is a (limit, key) tuple. The limit object is a
+            # slowapi.wrappers.Limit; the reset epoch comes from limiter.get_window_stats.
+            try:
+                stats = request.app.state.limiter.get_window_stats(view_limit[0], *view_limit[1])
+                # get_window_stats returns (reset_epoch, remaining) — first element is epoch.
+                reset_epoch = stats[0]
+                retry_after = max(1, int(reset_epoch - time.time()))
+            except Exception:  # noqa: BLE001  — defensive: any limiter API drift falls back to 60
+                retry_after = 60
         detail_msg = str(getattr(exc, "detail", "Rate limit exceeded"))
         return problem_response(
             request,
