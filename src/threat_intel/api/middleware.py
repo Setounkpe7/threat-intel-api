@@ -110,6 +110,21 @@ class SecurityHeadersMiddleware:
             parts.append("preload")
         return "; ".join(parts)
 
+    # Headers that fingerprint the server runtime — stripped on every response.
+    # Defence-in-depth: uvicorn --server-header=false handles the Server header
+    # in production, but the middleware covers TestClient and any other ASGI
+    # transport too.
+    _DENY_HEADERS = (
+        "server",
+        "x-powered-by",
+        "via",
+        "x-runtime",
+        "x-aspnet-version",
+        "x-process-time",
+        "sentry-trace",
+        "baggage",
+    )
+
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
@@ -126,6 +141,9 @@ class SecurityHeadersMiddleware:
                 headers.setdefault("Referrer-Policy", self._config.referrer_policy)
                 headers.setdefault("Permissions-Policy", self._config.permissions_policy)
                 headers.setdefault("Content-Security-Policy", self._config.content_security_policy)
+                for forbidden in self._DENY_HEADERS:
+                    if forbidden in headers:
+                        del headers[forbidden]
             await send(message)
 
         await self.app(scope, receive, send_with_headers)

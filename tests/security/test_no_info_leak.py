@@ -1,8 +1,10 @@
 """Cross-cutting: no response from the app may leak fingerprinting headers,
 exception messages, or stack traces.
 
-This file grows in later tasks (T3 adds Server/X-Powered-By/etc.). For T1
-we cover the exception-message + traceback case.
+This file is shared across tasks. T1 covers the exception-message + traceback
+case (500 body + structlog locals). T3 adds the DENY_HEADERS parametrised test
+that walks several paths and asserts none of the fingerprinting headers ever
+make it onto the wire.
 """
 
 import pytest
@@ -45,3 +47,26 @@ def test_structlog_does_not_render_locals():
     forbidden = ["ExceptionPrettyPrinter", "set_exc_info"]
     for f in forbidden:
         assert f not in proc_names, f"{f} renders local vars; remove from prod log chain"
+
+
+DENY_HEADERS = [
+    "server",
+    "x-powered-by",
+    "via",
+    "x-runtime",
+    "x-aspnet-version",
+    "x-process-time",
+    "sentry-trace",
+    "baggage",
+]
+
+PATHS = ["/health", "/api/v1/threats?limit=1", "/api/v1/cve/CVE-0000-9999", "/docs"]
+
+
+@pytest.mark.parametrize("path", PATHS)
+@pytest.mark.parametrize("hdr", DENY_HEADERS)
+async def test_response_strips_fingerprinting_headers(client, path, hdr):
+    resp = await client.get(path)
+    assert hdr not in {k.lower() for k in resp.headers}, (
+        f"{hdr} leaked on {path} (status={resp.status_code})"
+    )
