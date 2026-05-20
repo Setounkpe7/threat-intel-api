@@ -60,6 +60,11 @@ async def health(
     )
 
 
+# HEAD support for uptime monitors / k8s liveness probes that default to HEAD.
+# Registered separately so the GET definition remains the sole OpenAPI schema entry.
+router.add_api_route("/health", health, methods=["HEAD"], include_in_schema=False)
+
+
 @router.get("/livez", include_in_schema=False)
 async def livez() -> dict[str, str]:
     """Liveness probe: process is alive. No external dependency.
