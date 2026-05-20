@@ -19,7 +19,6 @@ from threat_intel.core.config import Settings  # noqa: E402
 from threat_intel.core.db import build_engine, session_factory  # noqa: E402
 from threat_intel.main import create_app  # noqa: E402
 from threat_intel.models.base import Base, Severity, SourceKind  # noqa: E402
-from threat_intel.models.cve import CVE  # noqa: E402
 from threat_intel.models.cwe import CWE  # noqa: E402
 from threat_intel.models.source import Source  # noqa: E402
 from threat_intel.models.threat import Threat  # noqa: E402
@@ -52,7 +51,7 @@ async def factory(engine) -> async_sessionmaker:
 
 @pytest_asyncio.fixture
 async def seeded_db(factory):
-    """Seed: 1 source 'nvd', 3 threats with varied severities and dates, CVE index rows."""
+    """Seed: 1 source 'nvd', 3 threats with varied severities and dates."""
     now = datetime.now(UTC)
     async with factory() as s:
         src = Source(
@@ -104,7 +103,6 @@ async def seeded_db(factory):
                 raw_data={"cve": {"id": cve_id}},
             )
             s.add(ts)
-            s.add(CVE(cve_id=cve_id, threat_id=tid))
             rows.append(t)
         await s.commit()
     return rows
