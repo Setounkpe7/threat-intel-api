@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from threat_intel.models.base import Severity
-from threat_intel.models.cve import CVE
 from threat_intel.models.source import Source
 from threat_intel.models.threat import Threat
 from threat_intel.models.threat_source import ThreatSource
@@ -117,16 +116,20 @@ async def list_threats(
     )
 
 
-async def get_threat_by_cve(session: AsyncSession, cve_id: str) -> Threat | None:
+async def get_threat_by_external_id(session: AsyncSession, external_id: str) -> Threat | None:
+    # M3a moved canonical CVE/GHSA storage to threat_source.external_id; the legacy
+    # cve table is no longer written to. Look up via ThreatSource so drill-down from
+    # sector dashboards (which surface CVE-* and GHSA-* alike) resolves.
     row = (
         await session.execute(
-            select(CVE)
+            select(ThreatSource)
             .options(
-                selectinload(CVE.threat)
+                selectinload(ThreatSource.threat)
                 .selectinload(Threat.sources)
                 .selectinload(ThreatSource.source)
             )
-            .where(CVE.cve_id == cve_id)
+            .where(ThreatSource.external_id == external_id)
+            .limit(1)
         )
     ).scalar_one_or_none()
     return row.threat if row else None

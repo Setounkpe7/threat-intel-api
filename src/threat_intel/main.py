@@ -1,11 +1,12 @@
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 import httpx
 import structlog
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -17,7 +18,8 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 from threat_intel import __version__
 from threat_intel.api.docs import router as docs_router
 from threat_intel.api.health import router as health_router
-from threat_intel.api.middleware import SecurityHeadersMiddleware
+from threat_intel.api.middleware import ProblemCORSMiddleware, SecurityHeadersMiddleware
+from threat_intel.api.problem import problem_response
 from threat_intel.api.security import limiter
 from threat_intel.api.v1 import api_v1
 from threat_intel.collectors.base import BaseCollector
@@ -65,14 +67,6 @@ def _init_sentry(settings: Settings) -> None:
         send_default_pii=False,
         traces_sample_rate=0.0,
         integrations=[StarletteIntegration(), FastApiIntegration()],
-    )
-
-
-def _problem(status: int, title: str, detail: str, type_: str = "about:blank") -> JSONResponse:
-    return JSONResponse(
-        status_code=status,
-        content={"type": type_, "title": title, "status": status, "detail": detail},
-        media_type="application/problem+json",
     )
 
 
@@ -205,7 +199,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     if settings.cors_origins:
         app.add_middleware(
-            CORSMiddleware,
+            ProblemCORSMiddleware,
             allow_origins=settings.cors_origins,
             allow_credentials=False,
             allow_methods=["GET", "POST"],
@@ -217,24 +211,47 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
 
     @app.exception_handler(ThreatNotFoundException)
-    async def _not_found(_: Request, exc: ThreatNotFoundException) -> JSONResponse:
-        return _problem(HTTP_404_NOT_FOUND, "Threat not found", str(exc))
+    async def _not_found(request: Request, exc: ThreatNotFoundException) -> JSONResponse:
+        return problem_response(request, HTTP_404_NOT_FOUND, "Threat not found", str(exc))
 
     @app.exception_handler(ConfigurationError)
-    async def _config_err(_: Request, exc: ConfigurationError) -> JSONResponse:
-        return _problem(HTTP_500_INTERNAL_SERVER_ERROR, "Configuration error", str(exc))
+    async def _config_err(request: Request, exc: ConfigurationError) -> JSONResponse:
+        return problem_response(
+            request, HTTP_500_INTERNAL_SERVER_ERROR, "Configuration error", str(exc)
+        )
 
     @app.exception_handler(CollectorError)
-    async def _collector_err(_: Request, exc: CollectorError) -> JSONResponse:
-        return _problem(502, "Upstream collector error", str(exc))
+    async def _collector_err(request: Request, exc: CollectorError) -> JSONResponse:
+        return problem_response(request, 502, "Upstream collector error", str(exc))
 
     @app.exception_handler(PersistenceError)
-    async def _persistence_err(_: Request, exc: PersistenceError) -> JSONResponse:
-        return _problem(HTTP_500_INTERNAL_SERVER_ERROR, "Persistence error", str(exc))
+    async def _persistence_err(request: Request, exc: PersistenceError) -> JSONResponse:
+        return problem_response(
+            request, HTTP_500_INTERNAL_SERVER_ERROR, "Persistence error", str(exc)
+        )
 
     @app.exception_handler(ThreatIntelException)
-    async def _generic(_: Request, exc: ThreatIntelException) -> JSONResponse:
-        return _problem(HTTP_500_INTERNAL_SERVER_ERROR, "Internal error", str(exc))
+    async def _generic(request: Request, exc: ThreatIntelException) -> JSONResponse:
+        return problem_response(request, HTTP_500_INTERNAL_SERVER_ERROR, "Internal error", str(exc))
+
+    # Generic HTTPException (raised by routers via fastapi.HTTPException). Without
+    # this handler FastAPI falls back to {"detail": "..."} as application/json,
+    # breaking the RFC 7807 contract the README advertises.
+    @app.exception_handler(HTTPException)
+    async def _http_exc(request: Request, exc: HTTPException) -> JSONResponse:
+        title = HTTPStatus(exc.status_code).phrase or "Error"
+        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+        return problem_response(request, exc.status_code, title, detail)
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_exc(request: Request, exc: RequestValidationError) -> JSONResponse:
+        return problem_response(
+            request,
+            status=422,
+            title="Validation error",
+            detail="Request validation failed",
+            errors=exc.errors(),
+        )
 
     app.include_router(docs_router)
     app.include_router(health_router)
