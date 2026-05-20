@@ -50,7 +50,7 @@ def has_admin_key(
 
 
 # Module-level limiter; `enabled` is set when the app starts.
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+limiter = Limiter(key_func=get_remote_address, default_limits=[], headers_enabled=True)
 
 
 AdminAuth = Depends(require_admin_key)

@@ -19,6 +19,8 @@ def problem_response(
     title: str,
     detail: str,
     type_: str = "about:blank",
+    *,
+    extra_headers: dict[str, str] | None = None,
     **extra: object,
 ) -> JSONResponse:
     body: dict[str, Any] = {
@@ -30,8 +32,12 @@ def problem_response(
     if request is not None:
         body["instance"] = request.url.path
     body.update(extra)
+    headers: dict[str, str] = {}
+    if extra_headers:
+        headers.update(extra_headers)
     return JSONResponse(
         status_code=status,
         content=body,
         media_type="application/problem+json",
+        headers=headers if headers else None,
     )
