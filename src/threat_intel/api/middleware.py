@@ -10,6 +10,7 @@ Swagger UI working out of the box (it loads from jsdelivr).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -158,15 +159,18 @@ class ProblemCORSMiddleware(CORSMiddleware):
             for k, v in response.headers.items()
             if k.lower() not in {"content-type", "content-length"}
         }
+        instance = getattr(self, "_current_path", None) or None
+        content: dict[str, Any] = {
+            "type": "about:blank",
+            "title": "CORS preflight rejected",
+            "status": response.status_code,
+            "detail": failure_text,
+        }
+        if instance is not None:
+            content["instance"] = instance
         return JSONResponse(
             status_code=response.status_code,
-            content={
-                "type": "about:blank",
-                "title": "CORS preflight rejected",
-                "status": response.status_code,
-                "detail": failure_text,
-                "instance": getattr(self, "_current_path", "") or "",
-            },
+            content=content,
             media_type="application/problem+json",
             headers={
                 **cors_headers,
