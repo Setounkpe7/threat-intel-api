@@ -68,7 +68,14 @@ def build_landing_csp() -> str:
     )
 
 
-_DEFAULT_CSP = build_csp()
+# Strict floor: every response gets this unless a route explicitly overrides
+# (currently /docs and / do, via `response.headers["Content-Security-Policy"] = …`).
+# default-src 'none' does NOT cover form-action or frame-ancestors per CSP3 §6.1,
+# so those are listed explicitly.
+_DEFAULT_CSP = (
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; "
+    "form-action 'none'; object-src 'none'; script-src 'none'; style-src 'none'"
+)
 
 # Keep this list small and focused — every entry is one fewer browser API
 # any compromised dependency can call from a /docs page.
@@ -119,6 +126,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         headers.setdefault("Referrer-Policy", self._config.referrer_policy)
         headers.setdefault("Permissions-Policy", self._config.permissions_policy)
         headers.setdefault("Content-Security-Policy", self._config.content_security_policy)
+        # Block Spectre-style cross-origin reads; safe for a SIEM-facing API.
+        headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         return response
 
 
