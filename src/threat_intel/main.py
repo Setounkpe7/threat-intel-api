@@ -1,3 +1,4 @@
+import contextlib
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -193,7 +194,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Lock debug=False so Starlette's debug traceback page can never leak,
     # even if a future env-var change tries to flip it.
-    assert app.debug is False, "FastAPI app.debug must be False in production"
+    if app.debug:
+        raise RuntimeError("FastAPI app.debug must be False in production")
 
     app.state.settings = settings  # also exposed by lifespan but available at startup
     app.state.limiter = limiter
@@ -243,12 +245,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Sentry's ASGI integration captures this exception BEFORE us, so we do
         # NOT call sentry_sdk.capture_exception (would double-fire). Logging
         # still useful for non-Sentry environments.
-        logger.error(
-            "unhandled_exception",
-            path=request.url.path,
-            method=request.method,
-            exc_info=exc,
-        )
+        with contextlib.suppress(Exception):  # noqa: BLE001
+            # Logger failure must not prevent the sanitised response.
+            logger.error(
+                "unhandled_exception",
+                path=request.url.path,
+                method=request.method,
+                exc_info=exc,
+            )
         return problem_response(
             request,
             HTTP_500_INTERNAL_SERVER_ERROR,
