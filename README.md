@@ -14,8 +14,8 @@
   <a href="https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml"><img alt="security gate" src="https://github.com/Setounkpe7/threat-intel-api/actions/workflows/security.yml/badge.svg?branch=main"/></a>
   <img alt="coverage" src="https://img.shields.io/badge/coverage-86%25-brightgreen"/>
   <img alt="trivy" src="https://img.shields.io/badge/trivy-CRITICAL%2BHIGH%200-brightgreen"/>
-  <img alt="python" src="https://img.shields.io/badge/python-3.12-blue"/>
-  <img alt="image size" src="https://img.shields.io/badge/docker-195MB%20alpine-blue"/>
+  <img alt="python" src="https://img.shields.io/badge/python-3.12%2B-blue"/>
+  <img alt="image size" src="https://img.shields.io/badge/docker-199MB%20alpine-blue"/>
   <img alt="OWASP API Top 10" src="https://img.shields.io/badge/OWASP%20API%20Top%2010-mapped-9D00FF"/>
   <img alt="Railway" src="https://img.shields.io/badge/deployed-Railway-9D00FF"/>
   <img alt="license" src="https://img.shields.io/badge/license-MIT-lightgrey"/>
@@ -72,14 +72,17 @@ curl -s 'https://threat-intel-api-production.up.railway.app/api/v1/sectors/finan
 
 ```json
 {
-  "cwe_match":      { "hit": true,  "matched": ["CWE-798"], "points": 20 },
-  "cvss_threshold": { "hit": true,  "threshold": 7.0,        "points": 15 },
-  "kev":            { "hit": false, "points": 0 },
+  "cwe_match":        { "hit": true,  "matched": ["CWE-798"], "points": 20 },
+  "cvss_threshold":   { "hit": true,  "threshold": 7.0, "cvss_score": 7.3, "points": 15 },
+  "kev":              { "hit": false, "points": 0 },
   "technology_match": { "hit": false, "matched": [], "points": 0 }
 }
 ```
 
-Every score is auditable: you can always see why a CVE landed where it did.
+Excerpt; the full breakdown also exposes `keyword_match`, `priority_boost`,
+`excluded`, `actively_exploited`, `ransomware`, `multi_source`, `package_match`,
+plus `raw_total` and `final_score`. Every score is auditable: you can always see
+why a CVE landed where it did.
 
 ---
 
@@ -260,11 +263,11 @@ Snapshot from the live deployment (2026-05-01):
 | New CVEs ingested last 24h | 273 |
 | Sources integrated | 3 (NVD + CISA KEV active in production, GHSA in stabilization) |
 | Sector profiles available | 6 public |
-| Endpoints | 13 (11 public + 2 admin) |
-| Python LOC (`src/`) | ~4,540 |
-| Tests | 92 (unit + integration) |
-| Test coverage gate | ≥ 80% |
-| Container image | 195 MB Alpine, non-root |
+| Endpoints | 18 (13 public + 5 admin) |
+| Python LOC (`src/`) | ~4,550 |
+| Tests | 291 (unit + integration + security) |
+| Test coverage gate | ≥ 80% (currently ~88%) |
+| Container image | 199 MB Alpine, non-root |
 | `/health` latency (remote client) | p50 ≈ 310 ms · p95 ≈ 410 ms (100 samples, includes DB round-trip) |
 
 ---
