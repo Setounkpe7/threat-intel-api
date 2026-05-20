@@ -19,6 +19,8 @@ def problem_response(
     title: str,
     detail: str,
     type_: str = "about:blank",
+    *,
+    instance: str | None = None,
     **extra: object,
 ) -> JSONResponse:
     body: dict[str, Any] = {
@@ -27,11 +29,18 @@ def problem_response(
         "status": status,
         "detail": detail,
     }
-    if request is not None:
+    # instance kwarg wins; otherwise derive from request.
+    if instance is not None:
+        body["instance"] = instance
+    elif request is not None:
         body["instance"] = request.url.path
     body.update(extra)
     return JSONResponse(
         status_code=status,
         content=body,
         media_type="application/problem+json",
+        headers={
+            "Cache-Control": "no-store",
+            "Pragma": "no-cache",
+        },
     )
