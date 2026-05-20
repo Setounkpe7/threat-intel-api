@@ -18,7 +18,7 @@ from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 # CSP tuned for FastAPI: the only HTML routes are /docs (Swagger UI) and
@@ -130,6 +130,11 @@ class ProblemCORSMiddleware(CORSMiddleware):
     the policy decision to the parent and just rewrap the failure body.
     """
 
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        # Stash path so preflight_response can populate the problem+json instance.
+        self._current_path = scope.get("path", "") if scope.get("type") == "http" else ""
+        await super().__call__(scope, receive, send)
+
     def preflight_response(self, request_headers: Headers) -> Response:
         response = super().preflight_response(request_headers)
         if response.status_code < 400:
@@ -137,7 +142,9 @@ class ProblemCORSMiddleware(CORSMiddleware):
 
         raw = bytes(response.body) if response.body else b""
         failure_text = raw.decode("utf-8") if raw else "Disallowed CORS"
-        # Drop the original content headers so JSONResponse can set its own.
+        # Keep CORS headers from the base response (Access-Control-Allow-Origin,
+        # Access-Control-Allow-Methods, etc.) but drop content-type/content-length
+        # since we're replacing the body.
         cors_headers = {
             k: v
             for k, v in response.headers.items()
@@ -150,7 +157,12 @@ class ProblemCORSMiddleware(CORSMiddleware):
                 "title": "CORS preflight rejected",
                 "status": response.status_code,
                 "detail": failure_text,
+                "instance": getattr(self, "_current_path", "") or "",
             },
             media_type="application/problem+json",
-            headers=cors_headers,
+            headers={
+                **cors_headers,
+                "Cache-Control": "no-store",
+                "Pragma": "no-cache",
+            },
         )
