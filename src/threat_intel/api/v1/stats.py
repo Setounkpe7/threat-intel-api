@@ -18,7 +18,7 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 @limiter.limit("100/minute")
 async def global_stats(
     request: Request,
-    response: Response,
+    response: Response,  # injected by SlowAPI for X-RateLimit-* header population
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> GlobalStats:
     payload = await sector_svc.global_stats_payload(session)

@@ -29,7 +29,7 @@ router = APIRouter(prefix="/sectors", tags=["sectors"])
 @limiter.limit("100/minute")
 async def list_sectors(
     request: Request,
-    response: Response,
+    response: Response,  # injected by SlowAPI for X-RateLimit-* header population
     is_admin: HasAdminKey,
     session: Annotated[AsyncSession, Depends(get_db)],
     visibility: Annotated[Literal["public", "all"], Query()] = "public",
@@ -50,7 +50,7 @@ async def list_sectors(
 @limiter.limit("100/minute")
 async def get_sector(
     request: Request,
-    response: Response,
+    response: Response,  # injected by SlowAPI for X-RateLimit-* header population
     is_admin: HasAdminKey,
     sector_id: str,
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -65,7 +65,7 @@ async def get_sector(
 @limiter.limit("100/minute")
 async def get_sector_threats(
     request: Request,
-    response: Response,
+    response: Response,  # injected by SlowAPI for X-RateLimit-* header population
     is_admin: HasAdminKey,
     sector_id: str,
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -99,7 +99,7 @@ async def get_sector_threats(
 @limiter.limit("100/minute")
 async def get_sector_dashboard(
     request: Request,
-    response: Response,
+    response: Response,  # injected by SlowAPI for X-RateLimit-* header population
     is_admin: HasAdminKey,
     sector_id: str,
     session: Annotated[AsyncSession, Depends(get_db)],
