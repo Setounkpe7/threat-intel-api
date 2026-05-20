@@ -5,6 +5,8 @@ from collections.abc import Iterable
 
 import pytest
 
+from threat_intel.api.middleware import _DEFAULT_CSP as STRICT_CSP_FLOOR  # noqa: PLC2701
+
 
 def _expected_required_headers() -> dict[str, str | Iterable[str]]:
     """Header → exact value, or iterable of substrings that must all appear."""
@@ -72,11 +74,6 @@ async def test_csp_does_not_use_unsafe_eval(client):
 # ---------------------------------------------------------------------------
 # B2: strict CSP floor + COOP/CORP on every response
 # ---------------------------------------------------------------------------
-
-STRICT_CSP_FLOOR = (
-    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; "
-    "form-action 'none'; object-src 'none'; script-src 'none'; style-src 'none'"
-)
 
 
 @pytest.mark.parametrize(
