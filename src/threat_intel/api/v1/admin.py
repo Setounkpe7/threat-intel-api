@@ -8,7 +8,7 @@ import structlog
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from sqlalchemy import select
 
-from threat_intel.api.security import AdminAuth
+from threat_intel.api.security import AdminAuth, ForbidBrowserOrigin
 from threat_intel.models.source import Source as _Source
 from threat_intel.schemas.api.admin import CollectorActionResult
 from threat_intel.schemas.sector import ReloadProfilesResult, RescoreAllAcknowledged
@@ -17,7 +17,11 @@ from threat_intel.services.scoring_job import ThreatScoringJob
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[AdminAuth])
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[ForbidBrowserOrigin, AdminAuth],  # order: Origin first, key second
+)
 
 
 @router.post("/reload-profiles", response_model=ReloadProfilesResult)

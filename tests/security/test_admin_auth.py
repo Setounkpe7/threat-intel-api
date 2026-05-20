@@ -59,3 +59,40 @@ async def test_admin_key_comparison_is_constant_time():
         "X-Admin-Key validation must use secrets.compare_digest to avoid "
         "string-comparison timing attacks"
     )
+
+
+async def test_admin_endpoint_rejects_browser_origin(client, app):
+    """Even with a valid X-Admin-Key, requests originating from a browser
+    (i.e., carrying an Origin header) must be rejected. Prevents CSRF
+    leverage via 'allow_headers=["*"]' in the CORS config."""
+    app.state.settings.admin_api_key = "test-key"
+    resp = await client.post(
+        "/api/v1/admin/reload-profiles",
+        headers={"X-Admin-Key": "test-key", "Origin": "https://anything.example"},
+    )
+    assert resp.status_code == 403
+    assert resp.headers["content-type"].startswith("application/problem+json")
+    assert "browser" in resp.json()["detail"].lower()
+
+
+async def test_admin_endpoint_allows_no_origin(client, app):
+    """curl / SIEM / SOAR clients without Origin still work."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    app.state.settings.admin_api_key = "test-key"
+    # Wire a minimal stub so the route body doesn't blow up on missing state.
+    # The test only cares that ForbidBrowserOrigin did NOT return 403.
+    mock_result = MagicMock(
+        public_count=0, private_count=0, added=[], updated=[], removed=[], errors=[]
+    )
+    mock_loader = MagicMock()
+    mock_loader.load_all = AsyncMock(return_value=mock_result)
+    app.state.profile_loader = mock_loader
+
+    resp = await client.post(
+        "/api/v1/admin/reload-profiles",
+        headers={"X-Admin-Key": "test-key"},
+    )
+    # 200 if profiles loaded, or 500 if no loader wired in test app;
+    # what we care about is NOT being a 403 from Origin check.
+    assert resp.status_code != 403

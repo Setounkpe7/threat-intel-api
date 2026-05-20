@@ -41,8 +41,17 @@ Every HTTP response carries:
 - `Permissions-Policy`: ten dangerous features denied (`geolocation=()`,
   `camera=()`, `microphone=()`, `payment=()`, `usb=()`, `accelerometer=()`,
   `gyroscope=()`, `magnetometer=()`, `midi=()`, `interest-cohort=()`)
-- `Content-Security-Policy` keeping Swagger UI (jsdelivr) functional while
-  forbidding inline JS, eval, plugins and framing.
+- `Content-Security-Policy`: a strict floor (`default-src 'none';
+  frame-ancestors 'none'; base-uri 'none'; form-action 'none';
+  object-src 'none'; script-src 'none'; style-src 'none'`) is set at the
+  ASGI layer; only `/docs` and `/` opt into a relaxed CSP to keep Swagger
+  UI and the index functional (B2 / audit pass 2).
+- `Cross-Origin-Resource-Policy: same-origin` and
+  `Cross-Origin-Opener-Policy: same-origin` on every response (B2).
+- `Server` and seven other fingerprinting headers (`X-Powered-By`, `Via`,
+  `X-Runtime`, `X-AspNet-Version`, `X-Process-Time`, `Sentry-Trace`,
+  `Baggage`) are stripped at the ASGI layer; uvicorn is started with
+  `--server-header=false` (B1).
 
 Tested in [`tests/security/test_security_headers.py`](../tests/security/test_security_headers.py).
 
@@ -62,6 +71,11 @@ instead of silently allowing access.
 Private profiles (`visibility="private"`) return **404** for anonymous
 callers — never 403 — to avoid confirming or denying their existence.
 
+Admin endpoints additionally reject requests that carry a browser-style
+`Origin` header via the `forbid_browser_origin` FastAPI dependency, neutralising
+CSRF leverage that the previous `allow_headers=["*"]` CORS config
+introduced (X2 / audit pass 2).
+
 ### 4. Input validation
 
 All query and path parameters are validated by FastAPI/Pydantic. Enum-typed
@@ -75,9 +89,16 @@ and an XSS string.
 ### 5. Rate limiting
 
 Public endpoints carry `@limiter.limit("100/minute")` per source IP via
-slowapi. The default returns problem-json on 429 and never echoes a
-traceback. Verified in
+slowapi. The 429 response is returned as `application/problem+json` with an
+integer-second `Retry-After` header so clients know exactly when to retry.
+`X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` are
+exposed on **every** response so well-behaved clients can budget their
+requests without hitting the ceiling (B4 / audit pass 2). Verified in
 [`tests/security/test_rate_limiting.py`](../tests/security/test_rate_limiting.py).
+
+`HEAD` is enabled only on cheap probe endpoints (`/health`, `/`, `/docs`);
+data-plane endpoints return **405** to prevent uptime-probe amplification
+that would cause unexpected DB load (B3 / audit pass 2).
 
 ### 6. Logging & secret hygiene
 
@@ -130,14 +151,14 @@ Final image size: **~195 MB** (under the 200 MB target).
 | Risk                                                | Status | Where it's handled                                                 |
 |-----------------------------------------------------|--------|--------------------------------------------------------------------|
 | **API1 — Broken Object Level Authorization**        | ✅     | Read-only public surface; admin routes gated; private profiles 404 |
-| **API2 — Broken Authentication**                    | ✅     | `X-Admin-Key` constant-time compare; 503 if unconfigured           |
+| **API2 — Broken Authentication**                    | ✅     | `X-Admin-Key` constant-time compare; 503 if unconfigured; admin endpoints reject browser-origin requests via `forbid_browser_origin` dependency — neutralises CSRF leverage from `allow_headers=["*"]` (X2) |
 | **API3 — Broken Object Property Level Authorization** | ✅   | Pydantic response models — fields are explicit, no ORM passthrough |
-| **API4 — Unrestricted Resource Consumption**        | ✅     | `slowapi` 100/min per IP; pagination caps `limit`                  |
+| **API4 — Unrestricted Resource Consumption**        | ✅     | `slowapi` 100/min per IP; pagination caps `limit`; `X-RateLimit-Limit`/`Remaining`/`Reset` on every response so clients can self-throttle (B4); 429 is `application/problem+json` with integer-second `Retry-After`; `HEAD` allowed only on cheap probes (`/health`, `/`, `/docs`) — data-plane endpoints return 405 to prevent DB-load amplification (B3) |
 | **API5 — Broken Function Level Authorization**      | ✅     | Admin router wraps every route in `Depends(require_admin_key)`     |
 | **API6 — Unrestricted Access to Sensitive Business Flows** | ⚠️ | `rescore-all` is admin-only and async; no quotas yet on admin path |
 | **API7 — Server Side Request Forgery**              | ✅     | Only outbound URL is the configured `NVD_BASE_URL`                 |
-| **API8 — Security Misconfiguration**                | ✅     | Hardened image; security headers; CSP; HSTS; secure defaults       |
-| **API9 — Improper Inventory Management**            | ✅     | OpenAPI is the source of truth; OCI labels expose image metadata   |
+| **API8 — Security Misconfiguration**                | ✅     | Hardened image; HSTS; strict CSP floor on every response — `/docs` and `/` opt into a relaxed CSP (B2); `Cross-Origin-Resource-Policy: same-origin` and `Cross-Origin-Opener-Policy: same-origin` on every response (B2); `Server` and 7 fingerprinting headers stripped at ASGI layer + `--server-header=false` (B1); catch-all `Exception` handler returns `application/problem+json` with fixed detail "Unexpected error" — no message or stack-trace leak, structlog never renders local variables (A1); `Cache-Control: no-store` + `Pragma: no-cache` on all `problem+json` responses so CDN/edge caches don't poison error responses (X1) |
+| **API9 — Improper Inventory Management**            | ✅     | OpenAPI is the source of truth; OCI labels expose image metadata; `/health` and `/api/v1/sources` report the same collector-attestation count via a single canonical helper `source_attestations_24h` (B5) |
 | **API10 — Unsafe Consumption of APIs**              | ✅     | NVD payload normalised through `BaseCollector.normalize`; never re-emitted raw |
 
 ## Known limitations

@@ -19,6 +19,9 @@ def problem_response(
     title: str,
     detail: str,
     type_: str = "about:blank",
+    *,
+    instance: str | None = None,
+    extra_headers: dict[str, str] | None = None,
     **extra: object,
 ) -> JSONResponse:
     body: dict[str, Any] = {
@@ -27,11 +30,21 @@ def problem_response(
         "status": status,
         "detail": detail,
     }
-    if request is not None:
+    # instance kwarg wins; otherwise derive from request.
+    if instance is not None:
+        body["instance"] = instance
+    elif request is not None:
         body["instance"] = request.url.path
     body.update(extra)
+    # Default no-cache headers on every problem+json. extra_headers (e.g.
+    # Retry-After, X-RateLimit-*) layer on top — if a caller wants to override
+    # Cache-Control they can pass it in extra_headers.
+    headers: dict[str, str] = {"Cache-Control": "no-store", "Pragma": "no-cache"}
+    if extra_headers:
+        headers.update(extra_headers)
     return JSONResponse(
         status_code=status,
         content=body,
         media_type="application/problem+json",
+        headers=headers,
     )

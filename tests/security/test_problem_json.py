@@ -83,3 +83,29 @@ async def test_cors_preflight_rejection_returns_problem_json(cors_client, header
     assert body["status"] == 400
     assert body["title"] == "CORS preflight rejected"
     assert "origin" in body["detail"].lower()
+
+
+async def test_cors_preflight_problem_has_instance(cors_client):
+    resp = await cors_client.options(
+        "/api/v1/threats",
+        headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "GET"},
+    )
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["instance"] == "/api/v1/threats"
+    assert resp.headers.get("cache-control") == "no-store"
+    assert resp.headers.get("pragma") == "no-cache"
+
+
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("GET", "/api/v1/sectors/nope/dashboard"),
+        ("GET", "/api/v1/cve/CVE-0000-9999"),
+        ("GET", "/api/v1/threats?limit=abc"),
+    ],
+)
+async def test_problem_json_has_cache_control_no_store(client, method, path):
+    resp = await client.request(method, path)
+    assert resp.headers.get("cache-control") == "no-store"
+    assert resp.headers.get("pragma") == "no-cache"
