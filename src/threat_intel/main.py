@@ -191,6 +191,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url=None,
     )
 
+    # Lock debug=False so Starlette's debug traceback page can never leak,
+    # even if a future env-var change tries to flip it.
+    assert app.debug is False, "FastAPI app.debug must be False in production"
+
     app.state.settings = settings  # also exposed by lifespan but available at startup
     app.state.limiter = limiter
     limiter.enabled = settings.rate_limit_enabled
@@ -233,6 +237,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(ThreatIntelException)
     async def _generic(request: Request, exc: ThreatIntelException) -> JSONResponse:
         return problem_response(request, HTTP_500_INTERNAL_SERVER_ERROR, "Internal error", str(exc))
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
+        # Sentry's ASGI integration captures this exception BEFORE us, so we do
+        # NOT call sentry_sdk.capture_exception (would double-fire). Logging
+        # still useful for non-Sentry environments.
+        logger.error(
+            "unhandled_exception",
+            path=request.url.path,
+            method=request.method,
+            exc_info=exc,
+        )
+        return problem_response(
+            request,
+            HTTP_500_INTERNAL_SERVER_ERROR,
+            "Internal server error",
+            "Unexpected error",
+        )
 
     # Generic HTTPException (raised by routers via fastapi.HTTPException). Without
     # this handler FastAPI falls back to {"detail": "..."} as application/json,

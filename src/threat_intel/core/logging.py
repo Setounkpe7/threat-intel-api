@@ -119,6 +119,26 @@ class ScrubbingFilter(logging.Filter):
         return True
 
 
+def _build_processors(env: Literal["dev", "prod"], level: str) -> list[structlog.types.Processor]:
+    """Return the full ordered structlog processor chain for *env* / *level*.
+
+    Extracted so tests can inspect the chain without calling configure_logging
+    (which has side effects on the global stdlib logging root).
+    """
+    renderer: structlog.types.Processor = (
+        structlog.dev.ConsoleRenderer() if env == "dev" else structlog.processors.JSONRenderer()
+    )
+    return [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        _scrub_processor,
+        renderer,
+    ]
+
+
 def configure_logging(
     env: Literal["dev", "prod"],
     level: str = "INFO",
@@ -135,18 +155,7 @@ def configure_logging(
     """
     level_int = getattr(logging, level.upper(), logging.INFO)
 
-    shared_processors: list[structlog.types.Processor] = [
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso", utc=True),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        _scrub_processor,
-    ]
-
-    renderer: structlog.types.Processor = (
-        structlog.dev.ConsoleRenderer() if env == "dev" else structlog.processors.JSONRenderer()
-    )
+    processors = _build_processors(env=env, level=level)
 
     # Resolve sys.stdout at write time (not config time) so that pytest's
     # capsys / temporary stream replacement does not leave the cached logger
@@ -155,7 +164,7 @@ def configure_logging(
         return structlog.PrintLogger(file=sys.stdout)
 
     structlog.configure(
-        processors=[*shared_processors, renderer],
+        processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(level_int),
         logger_factory=_stdout_factory,
         cache_logger_on_first_use=False,
