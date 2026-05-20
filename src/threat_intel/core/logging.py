@@ -119,7 +119,7 @@ class ScrubbingFilter(logging.Filter):
         return True
 
 
-def _build_processors(env: Literal["dev", "prod"], level: str) -> list[structlog.types.Processor]:
+def _build_processors(env: Literal["dev", "prod"]) -> list[structlog.types.Processor]:
     """Return the full ordered structlog processor chain for *env* / *level*.
 
     Extracted so tests can inspect the chain without calling configure_logging
@@ -155,7 +155,7 @@ def configure_logging(
     """
     level_int = getattr(logging, level.upper(), logging.INFO)
 
-    processors = _build_processors(env=env, level=level)
+    processors = _build_processors(env=env)
 
     # Resolve sys.stdout at write time (not config time) so that pytest's
     # capsys / temporary stream replacement does not leave the cached logger

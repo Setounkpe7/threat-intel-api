@@ -37,7 +37,10 @@ def test_structlog_does_not_render_locals():
     """Prevent log leak: locals can hold DB rows, Settings (API keys), SQL params."""
     from threat_intel.core.logging import _build_processors
 
-    procs = _build_processors(env="prod", level="INFO")
+    procs = _build_processors(env="prod")
+    # Callable processors may be functions (have __name__) or class instances
+    # (use __class__.__name__); hasattr disambiguates without importing
+    # private structlog internals.
     proc_names = [p.__name__ if hasattr(p, "__name__") else p.__class__.__name__ for p in procs]
     forbidden = ["ExceptionPrettyPrinter", "set_exc_info"]
     for f in forbidden:
