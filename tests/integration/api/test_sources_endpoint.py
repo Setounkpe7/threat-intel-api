@@ -1,12 +1,15 @@
 """Integration tests for /api/v1/sources and /api/v1/sources/{id}/runs."""
 
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest_asyncio
 
-from threat_intel.models.base import CollectorRunStatus, SourceKind
+from threat_intel.models.base import CollectorRunStatus, Severity, SourceKind
 from threat_intel.models.collector_run import CollectorRun
 from threat_intel.models.source import Source
+from threat_intel.models.threat import Threat
+from threat_intel.models.threat_source import ThreatSource
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -70,40 +73,83 @@ async def test_list_sources_returns_three_sources(client, three_sources):
 
 
 async def test_list_sources_includes_events_24h(client, factory, three_sources):
+    """events_24h counts threat_source attestations (first_seen_at) within 24h.
+
+    Updated in audit-pass-2 (B5): the old implementation summed
+    CollectorRun.events_new + events_updated, which diverged from /health's
+    count of ThreatSource rows. Both endpoints now use source_attestations_24h
+    so dashboards see a single coherent number.
+    """
     nvd = three_sources["nvd"]
     now = datetime.now(UTC)
 
     async with factory() as s:
-        # This run is within 24h — should be counted
-        recent_run = CollectorRun(
-            source_id=nvd.id,
-            started_at=now - timedelta(hours=1),
-            finished_at=now - timedelta(hours=1, minutes=-5),
-            status=CollectorRunStatus.success,
-            events_fetched=3,
-            events_new=2,
-            events_updated=1,
-            events_failed=0,
+        # 3 threat_source rows attested within 24h — should be counted
+        for i in range(3):
+            tid = uuid.uuid4()
+            pub = now - timedelta(hours=1)
+            s.add(
+                Threat(
+                    id=tid,
+                    threat_type="cve",
+                    title=f"T{i}",
+                    summary=".",
+                    severity=Severity.high,
+                    cvss_score=7.0,
+                    published_at=pub,
+                    last_modified_at=pub,
+                )
+            )
+            await s.flush()
+            s.add(
+                ThreatSource(
+                    threat_id=tid,
+                    source_id=nvd.id,
+                    external_id=f"CVE-2026-{2000 + i}",
+                    first_seen_at=pub,
+                    last_seen_at=pub,
+                    tags=[],
+                    affected_products=[],
+                    references=[],
+                    raw_data={},
+                )
+            )
+        # 1 threat_source row attested 48h ago — should NOT be counted
+        tid_old = uuid.uuid4()
+        old_pub = now - timedelta(hours=48)
+        s.add(
+            Threat(
+                id=tid_old,
+                threat_type="cve",
+                title="Old",
+                summary=".",
+                severity=Severity.low,
+                cvss_score=3.0,
+                published_at=old_pub,
+                last_modified_at=old_pub,
+            )
         )
-        # This run is older than 24h — should NOT be counted
-        old_run = CollectorRun(
-            source_id=nvd.id,
-            started_at=now - timedelta(hours=26),
-            finished_at=now - timedelta(hours=26, minutes=-5),
-            status=CollectorRunStatus.success,
-            events_fetched=10,
-            events_new=5,
-            events_updated=5,
-            events_failed=0,
+        await s.flush()
+        s.add(
+            ThreatSource(
+                threat_id=tid_old,
+                source_id=nvd.id,
+                external_id="CVE-2026-1999",
+                first_seen_at=old_pub,
+                last_seen_at=old_pub,
+                tags=[],
+                affected_products=[],
+                references=[],
+                raw_data={},
+            )
         )
-        s.add_all([recent_run, old_run])
         await s.commit()
 
     resp = await client.get("/api/v1/sources")
     assert resp.status_code == 200
     body = resp.json()
     nvd_row = next(s for s in body if s["name"] == "nvd")
-    # events_24h = events_new + events_updated from recent run only = 2 + 1 = 3
+    # events_24h = 3 threat_source rows with first_seen_at within 24h
     assert nvd_row["events_24h"] == 3
 
 

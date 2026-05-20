@@ -1,3 +1,5 @@
+import contextlib
+import time
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -8,7 +10,6 @@ import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import select
@@ -191,10 +192,41 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url=None,
     )
 
+    # Lock debug=False so Starlette's debug traceback page can never leak,
+    # even if a future env-var change tries to flip it.
+    if app.debug:
+        raise RuntimeError("FastAPI app.debug must be False in production")
+
     app.state.settings = settings  # also exposed by lifespan but available at startup
     app.state.limiter = limiter
     limiter.enabled = settings.rate_limit_enabled
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+
+    @app.exception_handler(RateLimitExceeded)
+    def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        # Must be sync — SlowAPIMiddleware falls back to its plain-text default
+        # handler if the registered handler is async (inspect.iscoroutinefunction
+        # check in slowapi/middleware.py).
+        view_limit = getattr(request.state, "view_rate_limit", None)
+        retry_after = 60  # safe default if the limiter never populated request.state
+        if view_limit is not None:
+            # view_rate_limit is a (limit, key) tuple. The limit object is a
+            # slowapi.wrappers.Limit; the reset epoch comes from limiter.get_window_stats.
+            try:
+                stats = request.app.state.limiter.get_window_stats(view_limit[0], *view_limit[1])
+                # get_window_stats returns (reset_epoch, remaining) — first element is epoch.
+                reset_epoch = stats[0]
+                retry_after = max(1, int(reset_epoch - time.time()))
+            except Exception:  # noqa: BLE001  — defensive: any limiter API drift falls back to 60
+                retry_after = 60
+        detail_msg = str(getattr(exc, "detail", "Rate limit exceeded"))
+        return problem_response(
+            request,
+            429,
+            "Too Many Requests",
+            detail_msg,
+            extra_headers={"Retry-After": str(retry_after)},
+        )
+
     app.add_middleware(SlowAPIMiddleware)
 
     if settings.cors_origins:
@@ -233,6 +265,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(ThreatIntelException)
     async def _generic(request: Request, exc: ThreatIntelException) -> JSONResponse:
         return problem_response(request, HTTP_500_INTERNAL_SERVER_ERROR, "Internal error", str(exc))
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
+        # Sentry's ASGI integration captures this exception BEFORE us, so we do
+        # NOT call sentry_sdk.capture_exception (would double-fire). Logging
+        # still useful for non-Sentry environments.
+        with contextlib.suppress(Exception):  # noqa: BLE001
+            # Logger failure must not prevent the sanitised response.
+            logger.error(
+                "unhandled_exception",
+                path=request.url.path,
+                method=request.method,
+                exc_info=exc,
+            )
+        return problem_response(
+            request,
+            HTTP_500_INTERNAL_SERVER_ERROR,
+            "Internal server error",
+            "Unexpected error",
+        )
 
     # Generic HTTPException (raised by routers via fastapi.HTTPException). Without
     # this handler FastAPI falls back to {"detail": "..."} as application/json,

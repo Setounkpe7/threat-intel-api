@@ -99,4 +99,4 @@ ENTRYPOINT ["/sbin/tini", "--"]
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl --fail --silent --show-error --max-time 2 http://127.0.0.1:8000/livez || exit 1
 
-CMD ["uvicorn", "threat_intel.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+CMD ["uvicorn", "threat_intel.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*", "--no-server-header"]

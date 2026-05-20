@@ -49,8 +49,27 @@ def has_admin_key(
     return secrets.compare_digest(x_admin_key, expected)
 
 
+def forbid_browser_origin(
+    origin: Annotated[str | None, Header()] = None,
+) -> None:
+    """Reject any request that carries an Origin header.
+
+    Browsers always send Origin on cross-origin POST/PUT/DELETE. SIEM/SOAR
+    clients and curl do not. Combined with CORS allow_headers=["*"], this
+    is the simplest CSRF block for admin endpoints without removing CORS
+    on public routes.
+    """
+    if origin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin endpoints reject browser-originated requests",
+        )
+
+
+ForbidBrowserOrigin = Depends(forbid_browser_origin)
+
 # Module-level limiter; `enabled` is set when the app starts.
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+limiter = Limiter(key_func=get_remote_address, default_limits=[], headers_enabled=True)
 
 
 AdminAuth = Depends(require_admin_key)
