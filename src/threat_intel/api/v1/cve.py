@@ -6,19 +6,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from threat_intel.api.deps import get_db
 from threat_intel.core.exceptions import ThreatNotFoundException
 from threat_intel.schemas.cve import ThreatDetail
-from threat_intel.services.threats import _to_read, get_threat_by_cve
+from threat_intel.services.threats import _to_read, get_threat_by_external_id
 
 router = APIRouter(prefix="/cve", tags=["cve"])
 
-CVE_PATTERN = r"^CVE-\d{4}-\d{4,}$"
+# CVE-YYYY-NNNN... or GHSA-xxxx-xxxx-xxxx — the dashboard surfaces both.
+EXTERNAL_ID_PATTERN = r"^(?:CVE-\d{4}-\d{4,}|GHSA-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4})$"
 
 
 @router.get("/{cve_id}", response_model=ThreatDetail)
 async def get_cve(
     session: Annotated[AsyncSession, Depends(get_db)],
-    cve_id: Annotated[str, Path(pattern=CVE_PATTERN)],
+    cve_id: Annotated[
+        str,
+        Path(
+            pattern=EXTERNAL_ID_PATTERN,
+            description="CVE id (CVE-YYYY-NNNN...) or GitHub advisory id (GHSA-xxxx-xxxx-xxxx).",
+        ),
+    ],
 ) -> ThreatDetail:
-    threat = await get_threat_by_cve(session, cve_id)
+    threat = await get_threat_by_external_id(session, cve_id)
     if threat is None:
         raise ThreatNotFoundException(cve_id=cve_id)
 
