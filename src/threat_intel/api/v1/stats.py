@@ -3,6 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from threat_intel.api.deps import get_db
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 @limiter.limit("100/minute")
 async def global_stats(
     request: Request,
+    response: Response,
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> GlobalStats:
     payload = await sector_svc.global_stats_payload(session)

@@ -9,7 +9,6 @@ import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import select
@@ -200,7 +199,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings  # also exposed by lifespan but available at startup
     app.state.limiter = limiter
     limiter.enabled = settings.rate_limit_enabled
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+
+    @app.exception_handler(RateLimitExceeded)
+    def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        # Must be sync: SlowAPIMiddleware.sync_check_limits falls back to the
+        # default _rate_limit_exceeded_handler if the registered handler is async.
+        retry_after = int(getattr(exc, "retry_after", None) or 60)
+        detail_msg = str(getattr(exc, "detail", "Rate limit exceeded"))
+        return problem_response(
+            request,
+            429,
+            "Too Many Requests",
+            detail_msg,
+            extra_headers={"Retry-After": str(retry_after)},
+        )
+
     app.add_middleware(SlowAPIMiddleware)
 
     if settings.cors_origins:
