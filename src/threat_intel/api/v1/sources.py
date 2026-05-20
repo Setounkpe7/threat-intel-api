@@ -1,11 +1,10 @@
-from datetime import UTC, datetime, timedelta
-
 from fastapi import APIRouter, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from threat_intel.models.collector_run import CollectorRun
 from threat_intel.models.source import Source
 from threat_intel.schemas.api.sources import CollectorRunOut, SourceHealth
+from threat_intel.services.threats import source_attestations_24h
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -13,24 +12,13 @@ router = APIRouter(prefix="/sources", tags=["sources"])
 @router.get("", response_model=list[SourceHealth])
 async def list_sources(request: Request) -> list[SourceHealth]:
     sf = request.app.state.session_factory
-    cutoff = datetime.now(UTC) - timedelta(hours=24)
     out: list[SourceHealth] = []
     async with sf() as session:
         rows = (await session.execute(select(Source).order_by(Source.name))).scalars().all()
         for src in rows:
-            count = (
-                await session.execute(
-                    select(
-                        func.coalesce(
-                            func.sum(CollectorRun.events_new + CollectorRun.events_updated),
-                            0,
-                        )
-                    ).where(
-                        CollectorRun.source_id == src.id,
-                        CollectorRun.started_at >= cutoff,
-                    )
-                )
-            ).scalar_one()
+            # Use the canonical attestation metric: threat_source rows with
+            # first_seen_at in the last 24h. This matches /health exactly.
+            count = await source_attestations_24h(session, src.name)
             out.append(
                 SourceHealth(
                     name=src.name,
@@ -40,7 +28,7 @@ async def list_sources(request: Request) -> list[SourceHealth]:
                     consecutive_failures=src.consecutive_failures,
                     current_interval_minutes=src.current_interval_minutes,
                     next_run_at=src.next_run_at,
-                    events_24h=int(count),
+                    events_24h=count,
                 )
             )
     return out

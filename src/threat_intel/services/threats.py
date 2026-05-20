@@ -141,17 +141,41 @@ async def collector_health(session: AsyncSession, source_name: str) -> tuple[Sou
     ).scalar_one_or_none()
     if src is None:
         return None, 0
-    yesterday = datetime.now(UTC) - timedelta(hours=24)
-    # Count threats that have a ThreatSource from this source created in the last 24h
+    count = await source_attestations_24h(session, source_name)
+    return src, count
+
+
+async def source_attestations_24h(
+    session: AsyncSession,
+    source_name: str,
+) -> int:
+    """Count of threat_source rows from this source attested in last 24h.
+
+    This is the canonical collector-heartbeat metric: it counts every time
+    a collector said 'I saw this threat', not distinct threats discovered.
+    A collector that re-asserts an existing CVE counts as activity.
+
+    Uses first_seen_at as the attestation timestamp so that data seeded
+    with a historical timestamp is counted in the correct window, not the
+    window in which it was inserted into the database.
+
+    Returns 0 if the source name is unknown.
+    """
+    src = (
+        await session.execute(select(Source).where(Source.name == source_name))
+    ).scalar_one_or_none()
+    if src is None:
+        return 0
+    since = datetime.now(UTC) - timedelta(hours=24)
     count = (
         await session.execute(
             select(func.count(ThreatSource.threat_id)).where(
                 ThreatSource.source_id == src.id,
-                ThreatSource.created_at >= yesterday,
+                ThreatSource.first_seen_at >= since,
             )
         )
     ).scalar_one()
-    return src, int(count)
+    return int(count)
 
 
 async def stats(session: AsyncSession) -> tuple[int, int]:
