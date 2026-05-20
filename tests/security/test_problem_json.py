@@ -93,6 +93,8 @@ async def test_cors_preflight_problem_has_instance(cors_client):
     assert resp.status_code == 400
     body = resp.json()
     assert body["instance"] == "/api/v1/threats"
+    assert resp.headers.get("cache-control") == "no-store"
+    assert resp.headers.get("pragma") == "no-cache"
 
 
 @pytest.mark.parametrize(
