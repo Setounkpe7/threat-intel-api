@@ -9,16 +9,13 @@ Swagger UI working out of the box (it loads from jsdelivr).
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.datastructures import Headers
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
+from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import Response
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 # CSP tuned for FastAPI: the only HTML routes are /docs (Swagger UI) and
@@ -89,9 +86,17 @@ class SecurityHeadersConfig:
     frame_options: str = "DENY"
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+class SecurityHeadersMiddleware:
+    """Pure ASGI middleware so it does not swallow exceptions into 500.
+
+    BaseHTTPMiddleware intercepts route exceptions and turns them into a
+    500 before FastAPI's @exception_handler(Exception) can fire. Switching
+    to pure ASGI lets exceptions propagate to Starlette's ServerErrorMiddleware
+    which routes them to our handler.
+    """
+
     def __init__(self, app: ASGIApp, config: SecurityHeadersConfig | None = None) -> None:
-        super().__init__(app)
+        self.app = app
         self._config = config or SecurityHeadersConfig()
         self._hsts = self._build_hsts(self._config)
 
@@ -104,22 +109,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             parts.append("preload")
         return "; ".join(parts)
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        response = await call_next(request)
-        headers = response.headers
-        # setdefault so a route that wants to override (e.g. CSP for an
-        # embedded HTML preview) can still do so explicitly.
-        headers.setdefault("Strict-Transport-Security", self._hsts)
-        headers.setdefault("X-Content-Type-Options", "nosniff")
-        headers.setdefault("X-Frame-Options", self._config.frame_options)
-        headers.setdefault("Referrer-Policy", self._config.referrer_policy)
-        headers.setdefault("Permissions-Policy", self._config.permissions_policy)
-        headers.setdefault("Content-Security-Policy", self._config.content_security_policy)
-        return response
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                # setdefault so a route that wants to override (e.g. CSP for an
+                # embedded HTML preview) can still do so explicitly.
+                headers.setdefault("Strict-Transport-Security", self._hsts)
+                headers.setdefault("X-Content-Type-Options", "nosniff")
+                headers.setdefault("X-Frame-Options", self._config.frame_options)
+                headers.setdefault("Referrer-Policy", self._config.referrer_policy)
+                headers.setdefault("Permissions-Policy", self._config.permissions_policy)
+                headers.setdefault("Content-Security-Policy", self._config.content_security_policy)
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 
 class ProblemCORSMiddleware(CORSMiddleware):
