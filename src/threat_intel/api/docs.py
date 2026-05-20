@@ -175,3 +175,9 @@ async def swagger_ui_html(request: Request) -> HTMLResponse:
         content=body,
         headers={"Content-Security-Policy": build_csp(nonce=nonce)},
     )
+
+
+# HEAD support for uptime monitors that probe cheap endpoints by default.
+# Registered separately so the GET definitions remain the sole schema entries.
+router.add_api_route("/", root, methods=["HEAD"], include_in_schema=False)
+router.add_api_route("/docs", swagger_ui_html, methods=["HEAD"], include_in_schema=False)
