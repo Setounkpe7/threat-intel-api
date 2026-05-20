@@ -5,6 +5,8 @@ from collections.abc import Iterable
 
 import pytest
 
+from threat_intel.api.middleware import _DEFAULT_CSP as STRICT_CSP_FLOOR  # noqa: PLC2701
+
 
 def _expected_required_headers() -> dict[str, str | Iterable[str]]:
     """Header → exact value, or iterable of substrings that must all appear."""
@@ -14,8 +16,10 @@ def _expected_required_headers() -> dict[str, str | Iterable[str]]:
         "x-frame-options": "DENY",
         "referrer-policy": "strict-origin-when-cross-origin",
         "permissions-policy": ("geolocation=()", "camera=()", "microphone=()"),
+        # Strict floor: default-src 'none' (not 'self') since task B2.
+        # Routes that need broader access (/docs, /) use direct assignment.
         "content-security-policy": (
-            "default-src 'self'",
+            "default-src 'none'",
             "frame-ancestors 'none'",
         ),
     }
@@ -44,7 +48,18 @@ async def test_security_headers_on_json_routes(client, path):
 async def test_security_headers_on_swagger_html(client):
     resp = await client.get("/docs")
     assert resp.status_code == 200
-    _assert_required(dict(resp.headers))
+    # /docs carries a relaxed CSP (not the strict floor) — use a targeted check
+    # instead of _assert_required() which now asserts default-src 'none'.
+    headers_lower = {k.lower(): v for k, v in resp.headers.items()}
+    for name in (
+        "strict-transport-security",
+        "x-content-type-options",
+        "x-frame-options",
+        "referrer-policy",
+        "permissions-policy",
+        "content-security-policy",
+    ):
+        assert name in headers_lower, f"missing header: {name}"
     csp = resp.headers["content-security-policy"]
     # Swagger UI ships from a CDN — CSP must allow it without opening the world.
     assert "cdn.jsdelivr.net" in csp
@@ -54,3 +69,43 @@ async def test_csp_does_not_use_unsafe_eval(client):
     resp = await client.get("/health")
     csp = resp.headers["content-security-policy"]
     assert "'unsafe-eval'" not in csp
+
+
+# ---------------------------------------------------------------------------
+# B2: strict CSP floor + COOP/CORP on every response
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/health",
+        "/api/v1/threats?limit=1",
+        "/api/v1/sectors/finance/feed.rss?min_score=0",
+        "/api/v1/cve/CVE-0000-9999",
+    ],
+)
+async def test_strict_csp_on_api_and_error_responses(client, path):
+    resp = await client.get(path)
+    csp = resp.headers["content-security-policy"]
+    assert csp == STRICT_CSP_FLOOR, f"unexpected CSP on {path}: {csp}"
+
+
+async def test_docs_keeps_relaxed_csp(client):
+    resp = await client.get("/docs")
+    csp = resp.headers["content-security-policy"]
+    assert "cdn.jsdelivr.net" in csp
+    assert "nonce-" in csp
+
+
+async def test_landing_keeps_its_csp(client):
+    resp = await client.get("/")
+    csp = resp.headers["content-security-policy"]
+    assert "fonts.googleapis.com" in csp
+
+
+@pytest.mark.parametrize("path", ["/health", "/api/v1/threats?limit=1", "/docs"])
+async def test_coop_corp_present(client, path):
+    resp = await client.get(path)
+    assert resp.headers["cross-origin-resource-policy"] == "same-origin"
+    assert resp.headers["cross-origin-opener-policy"] == "same-origin"

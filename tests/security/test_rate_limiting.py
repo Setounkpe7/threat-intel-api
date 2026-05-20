@@ -48,7 +48,7 @@ async def test_excess_requests_get_429(client, security_seed):
 
 
 async def test_429_response_is_problem_json_or_text(client, security_seed):
-    """When 429 fires, the body must be a defined error shape, not a stack trace."""
+    """When 429 fires, the body must be RFC 7807 problem+json, not a stack trace."""
     burst_until_429 = 110
     last = None
     for _ in range(burst_until_429):
@@ -56,8 +56,54 @@ async def test_429_response_is_problem_json_or_text(client, security_seed):
         if last.status_code == 429:
             break
     assert last is not None and last.status_code == 429
-    # slowapi default body is plain "Rate limit exceeded" text — accept either
-    # JSON or text/plain, just verify no traceback was rendered.
-    body = last.text.lower()
-    assert "traceback" not in body
-    assert "rate limit" in body or "too many" in body
+    # Must be RFC 7807 problem+json — the old plain-text shape is no longer acceptable.
+    assert last.headers["content-type"].startswith("application/problem+json"), (
+        f"Expected application/problem+json, got {last.headers.get('content-type')}"
+    )
+    body = last.json()
+    assert body["status"] == 429
+    assert body["title"] == "Too Many Requests"
+    assert "traceback" not in last.text.lower()
+
+
+@pytest.fixture
+async def tight_rate_limit_client(client, app):
+    """Force a 1/minute limit so we can exercise 429 deterministically."""
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+
+    # Reset SlowAPI limiter to a 1/minute default
+    app.state.limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["1/minute"],
+        headers_enabled=True,
+    )
+    yield client
+
+
+async def test_rate_limit_headers_on_200(tight_rate_limit_client):
+    resp = await tight_rate_limit_client.get("/health")
+    assert "x-ratelimit-limit" in {k.lower() for k in resp.headers}
+    assert "x-ratelimit-remaining" in {k.lower() for k in resp.headers}
+    assert "x-ratelimit-reset" in {k.lower() for k in resp.headers}
+
+
+async def test_429_returns_problem_json_with_retry_after(tight_rate_limit_client):
+    # Burn the budget
+    for _ in range(2):
+        last = await tight_rate_limit_client.get("/health")
+    assert last.status_code == 429
+    assert last.headers["content-type"].startswith("application/problem+json")
+    body = last.json()
+    assert body["status"] == 429
+    assert body["title"] == "Too Many Requests"
+    assert "instance" in body
+    retry_after = last.headers.get("retry-after")
+    assert retry_after is not None
+    # Integer seconds (SIEMs handle this reliably; HTTP-date is also valid but we standardise)
+    assert retry_after.isdigit()
+    # With a 1/minute limit, Retry-After must be in (0, 60] (not the
+    # hardcoded fallback). 60 exactly would suggest the handler fell
+    # through to the static default.
+    retry_after_int = int(retry_after)
+    assert 1 <= retry_after_int <= 60

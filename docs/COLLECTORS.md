@@ -89,3 +89,19 @@ This is acceptable for the platform's once-per-tick cadence. Stronger guarantees
 - **NVD** (`src/threat_intel/collectors/nvd.py`) — REST with pagination via `startIndex`/`totalResults`, retry on 5xx
 - **CISA KEV** (`src/threat_intel/collectors/cisa_kev.py`) — single-shot full-dump REST, no auth, conditional ransomware tag
 - **GitHub Advisories** (`src/threat_intel/collectors/github_advisories.py`) — GraphQL cursor pagination, bearer auth, HTML sanitization
+
+## Collector heartbeat
+
+`/health.collectors[name].threats_collected_24h` and
+`/api/v1/sources[name].events_24h` both report **collector attestations**
+in the last 24 hours: the number of times a collector produced a
+threat_source row for any threat. Re-assertions of an existing CVE count
+as activity. This is intentionally NOT a count of distinct threats
+discovered (which would mask a collector that is healthy but processing
+a deduplicated stream).
+
+Both fields are computed by `source_attestations_24h(session, source_name)`
+in `src/threat_intel/services/threats.py`, which counts `threat_source`
+rows where `first_seen_at >= now - 24h` for the named source. Field names
+are left unchanged to avoid breaking SIEM dashboards; only the value
+computation was unified (audit-pass-2, B5).

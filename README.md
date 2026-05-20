@@ -181,6 +181,13 @@ docker compose up --build
 
 Then `curl localhost:8000/health` and open `http://localhost:8000/docs`.
 
+After the stack is up, optionally seed demo data so the sector dashboards
+have something to show:
+
+```bash
+docker compose exec app python scripts/demo_seed.py
+```
+
 Full setup (local Python venv, SQLite mode, env reference, troubleshooting) lives in [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
 API guide with worked examples: [`docs/API_USAGE.md`](docs/API_USAGE.md).

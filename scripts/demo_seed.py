@@ -1,167 +1,229 @@
-"""Seed the demo DB with realistic threats and trigger scoring against all profiles."""
+"""Seed the local DB with realistic post-M3a threats and score them.
+
+Refuses to run against any DATABASE_URL whose host is not in the
+documented dev allow-list (localhost / 127.0.0.1 / db / postgres).
+This is a safety guardrail: an analyst pointing the script at staging
+or prod by mistake should fail fast, not contaminate the data.
+"""
 
 import asyncio
 import os
+import sys
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
-from threat_intel.core.db import build_engine, session_factory
-from threat_intel.models.base import Severity, SourceKind
-from threat_intel.models.cwe import CWE
-from threat_intel.models.source import Source
-from threat_intel.models.threat import Threat
-from threat_intel.services.profile_loader import SectorProfileLoader
-from threat_intel.services.scoring_job import ThreatScoringJob
+from urllib.parse import urlparse
 
 
+SAFE_HOSTS = {"localhost", "127.0.0.1", "db", "postgres"}
+
+
+def assert_safe_database_url() -> None:
+    """Abort if DATABASE_URL points to a non-dev host."""
+    url = os.environ.get("DATABASE_URL", "")
+    if not url:
+        print("DATABASE_URL not set", file=sys.stderr)
+        sys.exit(2)
+    # SQLAlchemy URLs look like "postgresql+asyncpg://user:pass@host:port/db".
+    # urlparse needs the +asyncpg stripped to parse the netloc correctly.
+    parsed = urlparse(url.replace("+asyncpg", "").replace("+aiosqlite", ""))
+    host = parsed.hostname or ""
+    if host not in SAFE_HOSTS and not url.startswith("sqlite"):
+        print(
+            f"Refusing to seed: DATABASE_URL host {host!r} is not in the "
+            f"dev allow-list {sorted(SAFE_HOSTS)}. Set DATABASE_URL to a "
+            f"local stack before running this script.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+# 5 realistic threats covering finance, ICS, and cloud-native sectors.
+# External IDs live on ThreatSource (post-M3a schema); Threat stores only
+# the deduplicated record.
 THREATS = [
     {
-        "external_id": "CVE-2026-0001",
-        "title": "Apache Tomcat RCE via crafted request",
-        "description": "Apache Tomcat 9.x is vulnerable to remote code execution when handling malformed payment processing requests. Attackers can execute arbitrary code on the underlying server via a crafted HTTP request.",
-        "severity": Severity.critical,
-        "cvss_score": 9.8,
-        "affected_products": ["cpe:2.3:a:apache:tomcat:9.0.65"],
+        "ext_id": "CVE-2026-0001",
+        "source": "nvd",
+        "title": "Apache Tomcat RCE in payment-processing module",
+        "summary": (
+            "RCE in Apache Tomcat 9.x via crafted POST to /payment endpoint."
+            " Attackers can execute arbitrary code on the underlying server."
+        ),
+        "severity": "critical",
+        "cvss": 9.8,
+        "products": ["cpe:2.3:a:apache:tomcat:9.0.65"],
         "cwes": ["CWE-79"],
         "age_h": 2,
     },
     {
-        "external_id": "CVE-2026-0002",
-        "title": "Magento checkout coupon abuse",
-        "description": "Magento 2.4.x allows authenticated users to bypass the checkout flow by replaying expired coupons against the storefront API.",
-        "severity": Severity.high,
-        "cvss_score": 7.5,
-        "affected_products": ["cpe:2.3:a:magento:magento:2.4.5"],
-        "cwes": ["CWE-639"],
-        "age_h": 5,
-    },
-    {
-        "external_id": "CVE-2026-0003",
-        "title": "Siemens SCADA PLC firmware backdoor",
-        "description": "An undocumented authentication bypass exists in Siemens SIMATIC S7-1500 PLC firmware enabling remote code execution on industrial control systems via the OPC-UA interface.",
-        "severity": Severity.critical,
-        "cvss_score": 9.5,
-        "affected_products": ["cpe:2.3:o:siemens:simatic_s7-1500:2.9"],
+        "ext_id": "CVE-2026-0002",
+        "source": "cisa_kev",
+        "title": "Hard-coded admin credentials in banking gateway",
+        "summary": (
+            "Hard-coded credentials allowing auth bypass on payment-rail gateway."
+            " Actively exploited per CISA KEV."
+        ),
+        "severity": "critical",
+        "cvss": 9.4,
+        "products": ["cpe:2.3:a:bank:payment-rail:1.0"],
         "cwes": ["CWE-798"],
-        "age_h": 8,
+        "age_h": 6,
     },
     {
-        "external_id": "CVE-2026-0004",
-        "title": "Epic EHR information exposure",
-        "description": "Epic EHR exposes patient phi (protected health information) via the patient portal API when an attacker forges the tenant header. This affects hospital deployments.",
-        "severity": Severity.high,
-        "cvss_score": 8.2,
-        "affected_products": ["cpe:2.3:a:epic:hyperspace:8.0"],
-        "cwes": ["CWE-200"],
-        "age_h": 14,
+        "ext_id": "GHSA-aaaa-bbbb-cccc",
+        "source": "github_advisories",
+        "title": "square/wire SQL injection in protobuf parser",
+        "summary": "SQLi via crafted wire payload in the square/wire library.",
+        "severity": "high",
+        "cvss": 7.5,
+        "products": [],
+        "cwes": ["CWE-89"],
+        "age_h": 4,
     },
     {
-        "external_id": "CVE-2026-0005",
-        "title": "Cisco ASA SSL VPN auth bypass actively exploited",
-        "description": "A zero-day in Cisco ASA SSL VPN allows authentication bypass. cisa advisory issued. Reportedly exploited by apt actors against government and defense contractors.",
-        "severity": Severity.critical,
-        "cvss_score": 9.9,
-        "affected_products": ["cpe:2.3:o:cisco:adaptive_security_appliance:9.18"],
-        "cwes": ["CWE-287"],
-        "age_h": 1,
+        "ext_id": "CVE-2026-0003",
+        "source": "nvd",
+        "title": "Kubernetes API server XSS in audit logs",
+        "summary": "XSS via crafted audit log entries on the K8s API server.",
+        "severity": "high",
+        "cvss": 7.2,
+        "products": ["cpe:2.3:a:kubernetes:kubernetes:1.28"],
+        "cwes": ["CWE-79"],
+        "age_h": 12,
     },
     {
-        "external_id": "CVE-2026-0006",
-        "title": "Minecraft forge mod arbitrary file write",
-        "description": "A Minecraft Forge mod loader vulnerability allows a malicious mod to write arbitrary files outside the game directory.",
-        "severity": Severity.medium,
-        "cvss_score": 5.5,
-        "affected_products": ["cpe:2.3:a:minecraftforge:forge:47.0"],
-        "cwes": ["CWE-22"],
-        "age_h": 36,
-    },
-    {
-        "external_id": "CVE-2026-0007",
-        "title": "Auth0 JWT signature bypass in tenant isolation",
-        "description": "Auth0 JWT validation flaw enables tenant boundary crossing in multi-tenant SaaS deployments. Affects oauth and oidc flows on Node.js SDKs.",
-        "severity": Severity.high,
-        "cvss_score": 8.8,
-        "affected_products": ["cpe:2.3:a:auth0:auth0-js:9.20"],
-        "cwes": ["CWE-287"],
-        "age_h": 20,
+        "ext_id": "CVE-2026-0004",
+        "source": "nvd",
+        "title": "Siemens PLC firmware buffer overflow",
+        "summary": (
+            "Buffer overflow in Siemens SIMATIC S7 PLC firmware reachable"
+            " via Modbus on industrial control networks."
+        ),
+        "severity": "high",
+        "cvss": 8.0,
+        "products": ["cpe:2.3:o:siemens:simatic_s7:6"],
+        "cwes": [],
+        "age_h": 18,
     },
 ]
 
 
 async def main() -> None:
-    db_url = os.environ["DATABASE_URL"]
-    engine = build_engine(db_url)
-    factory = session_factory(engine)
+    assert_safe_database_url()
 
-    loader = SectorProfileLoader(factory, Path("profiles"))
-    res = await loader.load_all()
-    print(f"Loaded profiles: public={res.public_count} added={len(res.added)}")
+    from sqlalchemy import select
 
+    from threat_intel.core.db import build_engine, session_factory
+    from threat_intel.models.base import Severity, SourceKind
+    from threat_intel.models.cwe import CWE
+    from threat_intel.models.source import Source
+    from threat_intel.models.threat import Threat
+    from threat_intel.models.threat_source import ThreatSource
+    from threat_intel.services.profile_loader import SectorProfileLoader
+    from threat_intel.services.scoring_job import ThreatScoringJob
+
+    eng = build_engine(os.environ["DATABASE_URL"])
+    factory = session_factory(eng)
     now = datetime.now(UTC)
+
     async with factory() as s:
-        s.add(
-            Source(
-                name="nvd",
-                kind=SourceKind.cve_feed,
-                url="https://services.nvd.nist.gov/rest/json/cves/2.0",
-                enabled=True,
-                last_run_at=now,
-                last_success_at=now,
-            )
-        )
+        # Ensure the three demo sources exist (upsert-style: skip if present).
+        for src_name, src_kind in [
+            ("nvd", SourceKind.cve_feed),
+            ("cisa_kev", SourceKind.cve_feed),
+            ("github_advisories", SourceKind.advisory),
+        ]:
+            existing = (
+                await s.execute(select(Source).where(Source.name == src_name))
+            ).scalar_one_or_none()
+            if existing is None:
+                s.add(
+                    Source(
+                        name=src_name,
+                        kind=src_kind,
+                        url=f"https://{src_name}.test",
+                        enabled=True,
+                    )
+                )
         await s.flush()
-        src_id = (await s.execute(__import__("sqlalchemy").select(Source.id))).scalar_one()
 
-        cwe_ids: set[str] = set()
-        for t in THREATS:
-            for c in t["cwes"]:
-                cwe_ids.add(c)
-        for cid in cwe_ids:
-            s.add(CWE(id=cid))
+        sources = {
+            n: (await s.execute(select(Source).where(Source.name == n))).scalar_one()
+            for n in ("nvd", "cisa_kev", "github_advisories")
+        }
+
+        # Ensure CWEs exist.
+        for cid, cname in [
+            ("CWE-79", "Cross-Site Scripting"),
+            ("CWE-89", "SQL Injection"),
+            ("CWE-798", "Use of Hard-coded Credentials"),
+        ]:
+            existing_cwe = (
+                await s.execute(select(CWE).where(CWE.id == cid))
+            ).scalar_one_or_none()
+            if existing_cwe is None:
+                s.add(CWE(id=cid, name=cname))
         await s.flush()
 
-        from sqlalchemy import select as _select
-
-        cwes_by_id = {
-            c.id: c
-            for c in (
-                await s.execute(_select(CWE).where(CWE.id.in_(list(cwe_ids))))
-            ).scalars().all()
+        cwes = {
+            cid: (await s.execute(select(CWE).where(CWE.id == cid))).scalar_one()
+            for cid in ("CWE-79", "CWE-89", "CWE-798")
         }
 
         for t in THREATS:
-            published = now - timedelta(hours=t["age_h"])
+            pub = now - timedelta(hours=t["age_h"])
+            tid = uuid.uuid4()
+            # Post-M3a: external_id + affected_products + raw_data live on
+            # ThreatSource, not on Threat.
             s.add(
                 Threat(
-                    id=uuid.uuid4(),
-                    source_id=src_id,
-                    external_id=t["external_id"],
+                    id=tid,
+                    threat_type="cve",
                     title=t["title"],
-                    description=t["description"],
-                    severity=t["severity"],
-                    cvss_score=t["cvss_score"],
+                    summary=t["summary"],
+                    severity=Severity[t["severity"]],
+                    cvss_score=t["cvss"],
                     cvss_vector="CVSS:3.1/AV:N",
                     cvss_version="3.1",
-                    affected_products=t["affected_products"],
-                    references=[f"https://nvd.nist.gov/vuln/detail/{t['external_id']}"],
-                    published_at=published,
-                    last_modified_at=published,
-                    raw_data={"source": "demo"},
-                    cwes=[cwes_by_id[c] for c in t["cwes"]],
+                    tags=["kev"] if t["source"] == "cisa_kev" else [],
+                    published_at=pub,
+                    last_modified_at=pub,
+                    cwes=[cwes[c] for c in t["cwes"]],
                 )
             )
+            await s.flush()
+            s.add(
+                ThreatSource(
+                    threat_id=tid,
+                    source_id=sources[t["source"]].id,
+                    external_id=t["ext_id"],
+                    first_seen_at=pub,
+                    last_seen_at=pub,
+                    tags=[t["source"]],
+                    affected_products=t["products"],
+                    references=[],
+                    raw_data={"id": t["ext_id"], "source": "demo"},
+                )
+            )
+
         await s.commit()
-    print(f"Inserted {len(THREATS)} demo threats")
+        print(f"Inserted {len(THREATS)} demo threats")
+
+    loader = SectorProfileLoader(
+        session_factory=factory,
+        profiles_root=Path("profiles"),
+    )
+    await loader.load_all()
 
     job = ThreatScoringJob(factory)
-    score_res = await job.rescore_all()
+    res = await job.rescore_all()
     print(
-        f"Scored: threats={score_res.threats_scored} "
-        f"profiles={score_res.profiles_count} rows_written={score_res.rows_written}"
+        f"Scored: threats={res.threats_scored} "
+        f"profiles={res.profiles_count} rows_written={res.rows_written}"
     )
 
-    await engine.dispose()
+    await eng.dispose()
 
 
 if __name__ == "__main__":
