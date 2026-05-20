@@ -12,6 +12,9 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -117,3 +120,37 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         headers.setdefault("Permissions-Policy", self._config.permissions_policy)
         headers.setdefault("Content-Security-Policy", self._config.content_security_policy)
         return response
+
+
+class ProblemCORSMiddleware(CORSMiddleware):
+    """CORSMiddleware variant that emits problem+json on preflight rejection.
+
+    The stock Starlette middleware returns `400 text/plain "Disallowed CORS …"`
+    which breaks our RFC 7807 contract advertised in README/docs. We delegate
+    the policy decision to the parent and just rewrap the failure body.
+    """
+
+    def preflight_response(self, request_headers: Headers) -> Response:
+        response = super().preflight_response(request_headers)
+        if response.status_code < 400:
+            return response
+
+        raw = bytes(response.body) if response.body else b""
+        failure_text = raw.decode("utf-8") if raw else "Disallowed CORS"
+        # Drop the original content headers so JSONResponse can set its own.
+        cors_headers = {
+            k: v
+            for k, v in response.headers.items()
+            if k.lower() not in {"content-type", "content-length"}
+        }
+        return JSONResponse(
+            status_code=response.status_code,
+            content={
+                "type": "about:blank",
+                "title": "CORS preflight rejected",
+                "status": response.status_code,
+                "detail": failure_text,
+            },
+            media_type="application/problem+json",
+            headers=cors_headers,
+        )
