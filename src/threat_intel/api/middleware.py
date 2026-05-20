@@ -119,6 +119,21 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         headers.setdefault("Referrer-Policy", self._config.referrer_policy)
         headers.setdefault("Permissions-Policy", self._config.permissions_policy)
         headers.setdefault("Content-Security-Policy", self._config.content_security_policy)
+        # Strip headers that fingerprint the server runtime.  Defence-in-depth:
+        # uvicorn --server-header=false handles the Server header in production,
+        # but the middleware covers TestClient and any other ASGI transport too.
+        for forbidden in [
+            "server",
+            "x-powered-by",
+            "via",
+            "x-runtime",
+            "x-aspnet-version",
+            "x-process-time",
+            "sentry-trace",
+            "baggage",
+        ]:
+            if forbidden in headers:
+                del headers[forbidden]
         return response
 
 
