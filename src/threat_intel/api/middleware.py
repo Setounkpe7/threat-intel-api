@@ -3,8 +3,10 @@
 `SecurityHeadersMiddleware` attaches a hardened set of response headers on
 every request — including error responses — without touching route logic.
 
-Defaults follow OWASP Secure Headers Project guidance, with a CSP that keeps
-Swagger UI working out of the box (it loads from jsdelivr).
+Defaults follow OWASP Secure Headers Project guidance. The default CSP is a
+strict floor (``default-src 'none'``) appropriate for JSON/RSS API responses.
+Routes that serve HTML (``/docs``, ``/``) override this via direct header
+assignment in ``api/docs.py`` before the middleware's ``setdefault`` runs.
 """
 
 from __future__ import annotations
