@@ -32,7 +32,9 @@ services:
         condition: service_completed_successfully
       db:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql+asyncpg://threat:threat@db:5432/threat_intel
       APP_ENV: prod
