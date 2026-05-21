@@ -176,6 +176,7 @@ Detailed component docs: [`docs/COLLECTORS.md`](docs/COLLECTORS.md), [`docs/SCOR
 ```bash
 git clone https://github.com/Setounkpe7/threat-intel-api.git
 cd threat-intel-api
+cp .env.example .env   # optional — fill in ADMIN_API_KEY / GITHUB_TOKEN to unlock admin endpoints and GHSA
 docker compose up --build
 ```
 
