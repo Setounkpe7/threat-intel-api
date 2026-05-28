@@ -106,3 +106,29 @@ jobs:
             --type cyclonedx \
             --predicate sbom.cdx.json \
             "${IMAGE}"
+
+      - name: Generate SLSA build provenance attestation
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Smoke verify the complete signature chain
+        env:
+          IMAGE: ${{ steps.ref.outputs.image }}
+          IDENTITY_REGEX: ^https://github\.com/${{ github.repository }}/\.github/workflows/release\.yml@refs/heads/main$
+          OIDC_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          echo "=== verifying image signature ==="
+          cosign verify "${IMAGE}" \
+            --certificate-identity-regexp "${IDENTITY_REGEX}" \
+            --certificate-oidc-issuer "${OIDC_ISSUER}"
+
+          echo "=== verifying SBOM attestation ==="
+          cosign verify-attestation "${IMAGE}" \
+            --type cyclonedx \
+            --certificate-identity-regexp "${IDENTITY_REGEX}" \
+            --certificate-oidc-issuer "${OIDC_ISSUER}"
+
+          echo "=== signature chain OK ==="
