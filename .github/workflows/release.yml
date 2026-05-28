@@ -91,3 +91,18 @@ jobs:
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5  # v3.10.1
         with:
           cosign-release: v2.4.1
+
+      - name: Sign the image with cosign keyless OIDC
+        env:
+          IMAGE: ${{ steps.ref.outputs.image }}
+        run: |
+          cosign sign --yes "${IMAGE}"
+
+      - name: Attest the SBOM as a signed in-toto predicate
+        env:
+          IMAGE: ${{ steps.ref.outputs.image }}
+        run: |
+          cosign attest --yes \
+            --type cyclonedx \
+            --predicate sbom.cdx.json \
+            "${IMAGE}"
