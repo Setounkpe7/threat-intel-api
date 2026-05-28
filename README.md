@@ -229,6 +229,11 @@ The CI security gate runs on every PR and every job below is blocking. As of thi
 - **Ruff** with security ruleset
 - **mypy** — strict mode on `src/`
 
+### Secret scanning
+
+- **Gitleaks** — scans the full git history on every PR; fails the gate
+  on any committed credential, key, or token
+
 ### Dependency security (SCA)
 
 - **pip-audit** — runtime CVE scan against `requirements.lock`
@@ -241,7 +246,34 @@ The CI security gate runs on every PR and every job below is blocking. As of thi
 - Non-root user (uid 1001) by default
 - **Hadolint** lints the Dockerfile in CI
 - **Trivy** image scan; CRITICAL+HIGH count must be 0
-- Image is signed with **Sigstore cosign** (keyless, OIDC-bound)
+- Image is published to **`ghcr.io/setounkpe7/threat-intel-api`** on merge
+  to `main`, signed with **Sigstore cosign** (keyless, OIDC-bound to this
+  repo's GitHub Actions identity), and shipped with a CycloneDX SBOM and
+  SLSA L2 build-provenance attestation
+
+### Verifying a published image
+
+Any consumer can cryptographically verify the image, the SBOM, and the
+build provenance:
+
+```bash
+IMAGE=ghcr.io/setounkpe7/threat-intel-api:sha-<short-sha>
+IDENTITY_REGEX='^https://github\.com/Setounkpe7/threat-intel-api/\.github/workflows/release\.yml@refs/heads/main$'
+OIDC_ISSUER=https://token.actions.githubusercontent.com
+
+cosign verify "${IMAGE}" \
+  --certificate-identity-regexp "${IDENTITY_REGEX}" \
+  --certificate-oidc-issuer "${OIDC_ISSUER}"
+
+cosign verify-attestation --type cyclonedx "${IMAGE}" \
+  --certificate-identity-regexp "${IDENTITY_REGEX}" \
+  --certificate-oidc-issuer "${OIDC_ISSUER}"
+
+gh attestation verify oci://${IMAGE} --repo Setounkpe7/threat-intel-api
+```
+
+All three must exit 0. See [`docs/RELEASING.md`](docs/RELEASING.md) for
+the rollback procedure and the one-time GHCR setup.
 
 ### Runtime security
 
