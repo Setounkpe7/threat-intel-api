@@ -33,6 +33,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
+      - name: Lowercase image name
+        # GHCR / OCI registry refs are case-sensitive and must be lowercase.
+        # github.repository_owner preserves the user's mixed-case login
+        # (e.g. "Setounkpe7"), which the metadata-action lowercases for the
+        # push tags but our env-built digest ref does not — breaking Trivy
+        # and cosign on the very next steps. Normalise IMAGE_NAME up front.
+        run: |
+          echo "IMAGE_NAME=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3.12.0
 
