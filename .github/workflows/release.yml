@@ -1,0 +1,34 @@
+name: release
+
+# Fires only after a successful merge to main. security.yml has already
+# gated the PR; this workflow's job is to publish and sign the merge-commit
+# image, not to re-validate it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Deny-all by default; each job escalates only what it needs.
+permissions: {}
+
+# Never abort a half-signed publish — wait for the previous run to finish.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/threat-intel-api
+
+jobs:
+  build-publish-sign:
+    name: build + publish + sign
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read         # checkout
+      packages: write        # push to GHCR
+      id-token: write        # OIDC for cosign keyless + attestations
+      attestations: write    # for actions/attest-build-provenance
+    steps:
+      - name: Placeholder
+        run: echo "skeleton — fleshed out in following tasks"
