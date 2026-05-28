@@ -73,3 +73,21 @@ jobs:
         run: |
           echo "image=${REGISTRY}/${IMAGE_NAME}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
           echo "image=${REGISTRY}/${IMAGE_NAME}@${{ steps.build.outputs.digest }}"
+
+      - name: Generate CycloneDX SBOM with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          format: cyclonedx
+          output: sbom.cdx.json
+
+      - name: Sanity-check the SBOM file exists and has components
+        run: |
+          test -s sbom.cdx.json
+          jq -e '.components | length > 0' sbom.cdx.json > /dev/null
+          echo "SBOM contains $(jq '.components | length' sbom.cdx.json) components"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5  # v3.10.1
+        with:
+          cosign-release: v2.4.1
