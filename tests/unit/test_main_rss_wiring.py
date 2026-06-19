@@ -15,5 +15,8 @@ async def test_feeds_yaml_in_repo_builds_four_collectors():
         loader = RSSFeedLoader(client, settings, feeds_root=settings.feeds_path)
         collectors = loader.build_collectors()
     assert {c.source_name for c in collectors} == {
-        "cisa_advisories", "cisa_ics", "cisco_psirt", "dfir_report",
+        "cisa_advisories",
+        "cisa_ics",
+        "cisco_psirt",
+        "dfir_report",
     }

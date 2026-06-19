@@ -58,8 +58,7 @@ def test_to_event_extracts_cve_and_sets_enrichment():
             "link": "https://example.test/post/1",
             "title": "Active exploitation of CVE-2021-44228",
             "summary": (
-                "Log4Shell exploited. C2 at hxxp://evil[.]example[.]net/x "
-                "<script>alert(1)</script>"
+                "Log4Shell exploited. C2 at hxxp://evil[.]example[.]net/x <script>alert(1)</script>"
             ),
             "published": "Mon, 13 Dec 2021 00:00:00 GMT",
             "tags": ["advisory"],

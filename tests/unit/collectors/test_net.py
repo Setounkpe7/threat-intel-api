@@ -9,6 +9,7 @@ from threat_intel.core.exceptions import CollectorError
 def _resolver_to(ip: str):
     def _r(host, *a, **k):
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 443))]
+
     return _r
 
 

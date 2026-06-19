@@ -42,9 +42,12 @@ def test_extract_iocs_capped():
 
 
 def test_stable_external_id_prefers_guid():
-    assert stable_external_id(
-        guid="urn:guid:abc", link="https://x/y", source_name="s", title="t", published="p"
-    ) == "urn:guid:abc"
+    assert (
+        stable_external_id(
+            guid="urn:guid:abc", link="https://x/y", source_name="s", title="t", published="p"
+        )
+        == "urn:guid:abc"
+    )
 
 
 def test_stable_external_id_hashes_link_when_no_guid():

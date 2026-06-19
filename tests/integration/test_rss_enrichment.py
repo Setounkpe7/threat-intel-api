@@ -38,9 +38,14 @@ async def sources(factory):
 def _nvd(cve):
     now = datetime.now(UTC)
     return CollectedEvent(
-        source_name="nvd", external_id=cve, title=f"t-{cve}", severity=Severity.high,
-        cvss_score=9.0, indicators=[CollectedIndicator(type="cve", value=cve)],
-        published_at=now, last_modified_at=now,
+        source_name="nvd",
+        external_id=cve,
+        title=f"t-{cve}",
+        severity=Severity.high,
+        cvss_score=9.0,
+        indicators=[CollectedIndicator(type="cve", value=cve)],
+        published_at=now,
+        last_modified_at=now,
         raw_data={"title": f"t-{cve}", "severity": "high", "cvss_score": 9.0, "cwe_ids": []},
     )
 
@@ -48,10 +53,18 @@ def _nvd(cve):
 def _rss(ext_id, cves, *, tt="report"):
     now = datetime.now(UTC)
     return CollectedEvent(
-        source_name="dfir_report", external_id=ext_id, title="rss", summary="s",
-        tags=["rss"], indicators=[CollectedIndicator(type="cve", value=c) for c in cves],
-        published_at=now, last_modified_at=now, raw_data={"references": [], "cwe_ids": []},
-        enrichment_mode=True, threat_type=tt, indicator_confidence=50,
+        source_name="dfir_report",
+        external_id=ext_id,
+        title="rss",
+        summary="s",
+        tags=["rss"],
+        indicators=[CollectedIndicator(type="cve", value=c) for c in cves],
+        published_at=now,
+        last_modified_at=now,
+        raw_data={"references": [], "cwe_ids": []},
+        enrichment_mode=True,
+        threat_type=tt,
+        indicator_confidence=50,
     )
 
 
@@ -63,8 +76,10 @@ async def test_rss_single_cve_enriches_existing(factory, sources):
     assert etid == tid
     async with factory() as s:
         ts = (
-            await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))
-        ).scalars().all()
+            (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid)))
+            .scalars()
+            .all()
+        )
         assert {t.source_id for t in ts} == {sources["nvd"].id, sources["dfir_report"].id}
         assert "rss" in (await s.execute(select(Threat).where(Threat.id == tid))).scalar_one().tags
 
@@ -81,8 +96,10 @@ async def test_rss_multi_cve_fans_out_no_merge(factory, sources):
         assert len([t for t in threats if t.threat_type == "cve"]) == 2
         for tid in (t1, t2):
             ts = (
-                await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))
-            ).scalars().all()
+                (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid)))
+                .scalars()
+                .all()
+            )
             assert sources["dfir_report"].id in {t.source_id for t in ts}
 
 
@@ -98,13 +115,17 @@ async def test_rss_no_cve_idempotent(factory, sources):
         assert threats[0].threat_type == "report"
         # Exactly one ThreatSource row must exist for (dfir_report, "orphan-1")
         ts_rows = (
-            await s.execute(
-                select(ThreatSource).where(
-                    ThreatSource.source_id == sources["dfir_report"].id,
-                    ThreatSource.external_id == "orphan-1",
+            (
+                await s.execute(
+                    select(ThreatSource).where(
+                        ThreatSource.source_id == sources["dfir_report"].id,
+                        ThreatSource.external_id == "orphan-1",
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(ts_rows) == 1
 
 
@@ -114,15 +135,23 @@ async def test_rss_never_overrides_canonical_cvss(factory, sources):
 
     now = datetime.now(UTC)
     rss_with_bogus_cvss = CollectedEvent(
-        source_name="dfir_report", external_id="p9", title="rss",
+        source_name="dfir_report",
+        external_id="p9",
+        title="rss",
         indicators=[CollectedIndicator(type="cve", value="CVE-2025-1234")],
-        published_at=now, last_modified_at=now,
+        published_at=now,
+        last_modified_at=now,
         # a malicious/low-quality feed claiming cvss 1.0 in raw_data
         raw_data={
-            "title": "rss", "summary": "x",
-            "cvss_score": 1.0, "severity": "low", "cwe_ids": [],
+            "title": "rss",
+            "summary": "x",
+            "cvss_score": 1.0,
+            "severity": "low",
+            "cwe_ids": [],
         },
-        enrichment_mode=True, threat_type="report", indicator_confidence=50,
+        enrichment_mode=True,
+        threat_type="report",
+        indicator_confidence=50,
     )
     await svc.process(rss_with_bogus_cvss, sources["dfir_report"].id)
     async with factory() as s:

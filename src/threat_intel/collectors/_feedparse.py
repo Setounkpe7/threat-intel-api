@@ -27,9 +27,7 @@ def assert_safe_xml(raw: bytes) -> None:
     discarded. feedparser then does the real mapping on the same bytes.
     """
     try:
-        DefusedET.fromstring(
-            raw, forbid_dtd=True, forbid_entities=True, forbid_external=True
-        )
+        DefusedET.fromstring(raw, forbid_dtd=True, forbid_entities=True, forbid_external=True)
     except DefusedXmlException as e:
         raise CollectorParseError(f"unsafe XML rejected: {type(e).__name__}") from e
     except Exception:  # noqa: BLE001 - malformed XML is fine here; feedparser is tolerant
