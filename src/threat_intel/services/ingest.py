@@ -76,7 +76,23 @@ class IngestService:
     async def process(
         self, event: CollectedEvent, source_id: int
     ) -> tuple[Literal["created", "updated"], uuid.UUID]:
-        """Ingest one CollectedEvent — dedup, upsert, recompute canonical fields.
+        """Ingest one CollectedEvent — dispatches to canonical or enrichment regime.
+
+        enrichment_mode=False (CVE collectors: NVD, KEV, GHSA):
+            → _process_canonical: the original dedup/merge/create behavior.
+
+        enrichment_mode=True (RSS feeds):
+            → _process_enrichment: fan-out to matched CVE threats; idempotent
+              autonomous threat for no-CVE items.
+        """
+        if event.enrichment_mode:
+            return await self._process_enrichment(event, source_id)
+        return await self._process_canonical(event, source_id)
+
+    async def _process_canonical(
+        self, event: CollectedEvent, source_id: int
+    ) -> tuple[Literal["created", "updated"], uuid.UUID]:
+        """Original dedup logic for canonical CVE/advisory collectors.
 
         Single-task safe: the entire sequence (lookup → create/upsert → recompute)
         runs inside one session/transaction, so within a single coroutine no
@@ -128,6 +144,63 @@ class IngestService:
 
             outcome: Literal["created", "updated"] = "created" if created_threat else "updated"
             return outcome, threat_id
+
+    async def _process_enrichment(
+        self, event: CollectedEvent, source_id: int
+    ) -> tuple[Literal["created", "updated"], uuid.UUID]:
+        """Enrichment regime for RSS feeds.
+
+        If the event's indicators match ≥1 existing threat (via CVE/GHSA lookup):
+          - attach the RSS source + indicators to EACH matched threat
+          - recompute each matched threat
+          - NO merge_candidate, NO autonomous threat creation
+          - returns ("updated", matches[0])
+
+        If 0 matches: create/fetch an autonomous threat keyed on
+        (source_id, external_id) via _get_or_create_autonomous, then
+        upsert indicators and recompute.
+        """
+        async with self._sf() as session:
+            matches = await _lookup_threat_ids_by_indicators(session, event.indicators)
+            if matches:
+                for threat_id in matches:
+                    await self._upsert_threat_source(session, threat_id, source_id, event)
+                    await self._upsert_indicators(session, threat_id, event)
+                await session.flush()
+                for threat_id in matches:
+                    await recompute_canonical(session, threat_id)
+                await session.commit()
+                return "updated", matches[0]
+
+            threat_id, created = await self._get_or_create_autonomous(session, event, source_id)
+            await self._upsert_threat_source(session, threat_id, source_id, event)
+            await self._upsert_indicators(session, threat_id, event)
+            await session.flush()
+            await recompute_canonical(session, threat_id)
+            await session.commit()
+            return ("created" if created else "updated"), threat_id
+
+    async def _get_or_create_autonomous(
+        self, session: AsyncSession, event: CollectedEvent, source_id: int
+    ) -> tuple[uuid.UUID, bool]:
+        """Return (threat_id, created) for an RSS item with no CVE/GHSA matches.
+
+        Idempotent: looks up an existing ThreatSource row for (source_id, external_id)
+        before creating a new Threat, so repeated ingestion of the same RSS post
+        returns the same threat_id without creating duplicates.
+        """
+        existing = (
+            await session.execute(
+                select(ThreatSource.threat_id).where(
+                    ThreatSource.source_id == source_id,
+                    ThreatSource.external_id == event.external_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            return existing, False
+        threat_id = await self._create_threat(session, event)
+        return threat_id, True
 
     async def _create_threat(self, session: AsyncSession, event: CollectedEvent) -> uuid.UUID:
         if event.threat_type is not None:
