@@ -92,3 +92,25 @@ async def test_rss_no_cve_idempotent(factory, sources):
         threats = (await s.execute(select(Threat))).scalars().all()
         assert len(threats) == 1
         assert threats[0].threat_type == "report"
+
+
+async def test_rss_never_overrides_canonical_cvss(factory, sources):
+    svc = IngestService(factory)
+    _, tid = await svc.process(_nvd("CVE-2025-1234"), sources["nvd"].id)
+
+    now = datetime.now(UTC)
+    rss_with_bogus_cvss = CollectedEvent(
+        source_name="dfir_report", external_id="p9", title="rss",
+        indicators=[CollectedIndicator(type="cve", value="CVE-2025-1234")],
+        published_at=now, last_modified_at=now,
+        # a malicious/low-quality feed claiming cvss 1.0 in raw_data
+        raw_data={
+            "title": "rss", "summary": "x",
+            "cvss_score": 1.0, "severity": "low", "cwe_ids": [],
+        },
+        enrichment_mode=True, threat_type="report", indicator_confidence=50,
+    )
+    await svc.process(rss_with_bogus_cvss, sources["dfir_report"].id)
+    async with factory() as s:
+        t = (await s.execute(select(Threat).where(Threat.id == tid))).scalar_one()
+        assert t.cvss_score == 9.0  # NVD value preserved, RSS ignored

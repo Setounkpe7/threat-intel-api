@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from threat_intel.models.base import IndicatorType, Severity
+from threat_intel.models.base import IndicatorType, Severity, SourceKind
 from threat_intel.models.cwe import CWE
 from threat_intel.models.threat import Threat
 from threat_intel.models.threat_indicator import ThreatIndicator
@@ -324,8 +324,13 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
         await session.refresh(src_ts, ["source"])
         by_name[src_ts.source.name] = src_ts
 
+    rss_names = {n for n, ts in by_name.items() if ts.source.kind == SourceKind.rss}
+    extra_names = [n for n in by_name if n not in _PRIORITY_ORDER]
+    effective_order = list(_PRIORITY_ORDER) + sorted(extra_names)
+    canonical_order = [n for n in effective_order if n not in rss_names]
+
     def _first_str(field: str) -> str | None:
-        for name in _PRIORITY_ORDER:
+        for name in effective_order:
             candidate = by_name.get(name)
             if candidate is None:
                 continue
@@ -340,7 +345,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
     cvss_score: float | None = None
     cvss_vector: str | None = None
     cvss_version: str | None = None
-    for pname in _PRIORITY_ORDER:
+    for pname in canonical_order:
         pcandidate = by_name.get(pname)
         if pcandidate is None:
             continue
@@ -354,7 +359,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
             break
 
     severity: Severity = Severity.unknown
-    for pname in _PRIORITY_ORDER:
+    for pname in canonical_order:
         pcandidate = by_name.get(pname)
         if pcandidate is None:
             continue
