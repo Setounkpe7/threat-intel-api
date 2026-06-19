@@ -51,5 +51,4 @@ def test_feeds_path_defaults_to_feeds_dir(monkeypatch):
 
 def test_dependencies_importable():
     import defusedxml.ElementTree  # noqa: F401
-
     import feedparser  # noqa: F401

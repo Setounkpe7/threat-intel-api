@@ -62,7 +62,9 @@ async def test_rss_single_cve_enriches_existing(factory, sources):
     assert out == "updated"
     assert etid == tid
     async with factory() as s:
-        ts = (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))).scalars().all()
+        ts = (
+            await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))
+        ).scalars().all()
         assert {t.source_id for t in ts} == {sources["nvd"].id, sources["dfir_report"].id}
         assert "rss" in (await s.execute(select(Threat).where(Threat.id == tid))).scalar_one().tags
 
@@ -78,7 +80,9 @@ async def test_rss_multi_cve_fans_out_no_merge(factory, sources):
         # still exactly 2 threats — NOT merged into 1
         assert len([t for t in threats if t.threat_type == "cve"]) == 2
         for tid in (t1, t2):
-            ts = (await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))).scalars().all()
+            ts = (
+                await s.execute(select(ThreatSource).where(ThreatSource.threat_id == tid))
+            ).scalars().all()
             assert sources["dfir_report"].id in {t.source_id for t in ts}
 
 
