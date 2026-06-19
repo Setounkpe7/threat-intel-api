@@ -90,6 +90,138 @@ This is acceptable for the platform's once-per-tick cadence. Stronger guarantees
 - **CISA KEV** (`src/threat_intel/collectors/cisa_kev.py`) — single-shot full-dump REST, no auth, conditional ransomware tag
 - **GitHub Advisories** (`src/threat_intel/collectors/github_advisories.py`) — GraphQL cursor pagination, bearer auth, HTML sanitization
 
+---
+
+## RSS feeds subsystem (M3b)
+
+### Overview
+
+RSS/Atom feeds are ingested by `RSSCollector` (`src/threat_intel/collectors/rss.py`), a
+config-driven collector instantiated once per feed from `feeds/feeds.yaml`. One
+`RSSFeedLoader` (`src/threat_intel/services/rss_feed_loader.py`) reads that file on
+startup and builds the collector list; the collectors are then registered alongside NVD,
+KEV and GHSA in `main.py`.
+
+### Configured feeds
+
+All four feeds are enabled in `feeds/feeds.yaml`. **Each URL must be verified with a
+real GET before enabling in production** (the comment in the YAML file states this
+explicitly).
+
+| `source_name`      | `threat_type` | `indicator_confidence` | Tier     | Interval |
+|--------------------|---------------|------------------------|----------|----------|
+| `cisa_advisories`  | `advisory`    | 80                     | gov      | 120 min  |
+| `cisa_ics`         | `advisory`    | 80                     | gov      | 120 min  |
+| `cisco_psirt`      | `advisory`    | 70                     | vendor   | 240 min  |
+| `dfir_report`      | `report`      | 50                     | research | 240 min  |
+
+URLs (from `feeds.yaml`):
+
+- `cisa_advisories` → `https://www.cisa.gov/cybersecurity-advisories/all.xml`
+- `cisa_ics` → `https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml`
+- `cisco_psirt` → `https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml`
+- `dfir_report` → `https://thedfirreport.com/feed/`
+
+### Two-path ingestion mechanism
+
+Every `CollectedEvent` emitted by an `RSSCollector` has `enrichment_mode=True`.
+`IngestService.process()` dispatches on this flag into `_process_enrichment()`, which
+applies one of two paths:
+
+**Path A — CVE/GHSA match (enrichment):**
+If any indicator in the event (`cve` or `ghsa` type) matches an existing `Threat`,
+the RSS source row and its indicators are attached to **each** matched threat (fan-out).
+Every matched threat is recomputed via `recompute_canonical()`. No merge_candidate
+logic fires; no new autonomous threat is created. This is the multi-source enrichment
+path for items that cite a known vulnerability.
+
+**Path B — no CVE/GHSA match (autonomous threat):**
+If no existing threat matches, an autonomous `Threat` is created with
+`threat_type = event.threat_type` (`"advisory"` or `"report"`). Subsequent ingestion
+of the same RSS item deduplicates idempotently on `(source_id, external_id)` via
+`_get_or_create_autonomous()`, which looks up an existing `ThreatSource` row before
+creating a new `Threat`. This dedup key is stable because `external_id` is computed
+deterministically from the RSS item's `<guid>` / `<link>` / title / published date by
+`stable_external_id()` in `_extract.py`.
+
+### `enrichment_mode` flag
+
+`CollectedEvent.enrichment_mode` (defined in `src/threat_intel/schemas/ingest.py`,
+default `False`) signals to `IngestService` that an event was produced by an RSS
+collector and must follow the enrichment regime rather than the canonical CVE dedup
+regime. Setting `severity=None` and `cvss_score=None` in `RSSCollector.to_event()` is
+the collector-side convention; the `recompute_canonical()` exclusion (see below) is the
+enforcement-side guarantee.
+
+### Confidence tiers
+
+`indicator_confidence` controls the weight given to IOCs extracted from an RSS item
+when stored in `ThreatSource`. Three tiers are in use:
+
+| Tier       | Value | Sources                       |
+|------------|-------|-------------------------------|
+| government | 80    | `cisa_advisories`, `cisa_ics` |
+| vendor     | 70    | `cisco_psirt`                 |
+| research   | 50    | `dfir_report`                 |
+
+### `unverified-ioc` quarantine tag
+
+When `RSSCollector.to_event()` extracts IOCs of type `ip`, `domain`, `url`, `md5`,
+`sha1`, or `sha256` from the item text, it appends the tag `"unverified-ioc"` to the
+event's tag list. This signals downstream consumers that those indicators come from an
+unstructured free-text source and have not been validated by a structured feed.
+
+### Rule: RSS sources NEVER set canonical CVSS / severity
+
+`RSSCollector.to_event()` always sets `severity=None` and `cvss_score=None` on the
+emitted `CollectedEvent`. In `recompute_canonical()` (`src/threat_intel/services/ingest.py`),
+RSS sources are identified by `source.kind == SourceKind.rss` and collected into
+`rss_names`. The `canonical_order` list used for CVSS and severity resolution is
+built by **excluding** every name in `rss_names`:
+
+```python
+canonical_order = [n for n in effective_order if n not in rss_names]
+```
+
+RSS sources are still included in `effective_order` for title/summary resolution
+(where `_first_str` iterates all sources), but they can never influence the
+`cvss_score`, `cvss_vector`, `cvss_version`, or `severity` fields of any threat.
+
+### Security controls
+
+| Control | Implementation |
+|---------|---------------|
+| **XXE / entity-expansion** | `defusedxml` safety gate in `_feedparse.py`: every feed is parsed once with `DefusedET.fromstring(forbid_dtd=True, forbid_entities=True, forbid_external=True)` before `feedparser` processes it. Any `DefusedXmlException` raises `CollectorParseError` and aborts ingestion of that feed. |
+| **SSRF** | `assert_fetchable_url()` in `_net.py`: scheme must be `https`; the feed hostname is DNS-resolved and every returned IP is checked — private, loopback, link-local, reserved, multicast, unspecified, and RFC 6598 CGNAT (`100.64.0.0/10`) addresses are all blocked. |
+| **Size cap** | Streaming download in `RSSCollector.fetch()` accumulates chunks and raises `CollectorHTTPError` if the total exceeds **5 MiB** (`MAX_FEED_BYTES = 5 * 1024 * 1024`). |
+| **HTML sanitization** | `clean_text()` in `_sanitize.py` first strips `<script>…</script>` blocks (regex), then runs `bleach.clean(tags=[], strip=True)` to remove all remaining tags. Applied to `title` and `summary` before storing in `CollectedEvent`. |
+
+### Persona decision — advisory/report threats excluded from sector feeds (Plan 2)
+
+Items that become autonomous `advisory`/`report` threats (Path B above) are **not yet
+filtered out of sector feeds**. The validated design decision is that such threats
+should be excluded from sector-scored feeds and threat lists by default, with an
+opt-in parameter (`?include_advisories=true`). This read-side filter is intentionally
+deferred to **Plan 2** (a separate implementation plan). Until Plan 2 ships,
+`advisory` and `report` threats surface in sector feeds alongside `cve` threats.
+
+### Adding or modifying a feed
+
+Edit `feeds/feeds.yaml`. The schema is validated at startup by `RSSFeedSchema`
+(`src/threat_intel/schemas/rss_feed.py`) — invalid entries are skipped with a warning
+log rather than crashing the process. Fields:
+
+| Field | Type | Constraints | Description |
+|-------|------|------------|-------------|
+| `source_name` | `str` | 1–64 chars, unique | Used as the `Source.name` DB key |
+| `url` | `str` | — | Must be `https`; verified by SSRF guard at fetch time |
+| `threat_type` | `"advisory"` \| `"report"` | — | Determines `Threat.threat_type` for no-CVE items |
+| `interval_minutes` | `int` | 15–1440 | Polling cadence |
+| `indicator_confidence` | `int` | 0–100 | Per-IOC confidence weight |
+| `default_tags` | `list[str]` | — | Tags always attached (e.g. `source:cisa_advisories`) |
+
+---
+
 ## Collector heartbeat
 
 `/health.collectors[name].threats_collected_24h` and

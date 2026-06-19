@@ -100,7 +100,7 @@ A SIEM, a SOAR, or a human analyst can consume the result without tuning the API
 
 | | |
 |---|---|
-| **Multi-source ingestion** | NVD, CISA KEV and GitHub Advisories with cross-feed deduplication |
+| **Multi-source ingestion** | NVD, CISA KEV, GitHub Advisories and RSS feeds with cross-feed deduplication |
 | **Sector-aware scoring** | 6 public profiles (finance, healthcare, ICS, gov, SaaS, e-commerce) |
 | **Async pipeline** | `httpx` + `APScheduler`, field-level priority on conflicting sources |
 | **SIEM-ready feeds** | JSON, RSS 2.0, paginated and filterable |
@@ -318,7 +318,8 @@ Snapshot from the live deployment (2026-05-01):
 - [x] M2 — Sector-aware scoring, dashboards, RSS, hot-reload, admin endpoints, rate limiting
 - [x] M3 — Production deploy on Railway with security gate
 - [x] M3a — Multi-source ingestion (CISA KEV + GHSA), cross-source dedup, IOC lookups
-- [ ] M3b — GHSA collector stabilization, additional IOC source types
+- [x] M3b — RSS feed ingestion (CISA advisories, CISA ICS, Cisco PSIRT, DFIR Report); CVE-bearing items enrich existing threats (fan-out), no-CVE items create idempotent advisory/report threats; defusedxml + SSRF guard + 5 MiB cap; confidence tiers gov=80/vendor=70/research=50
+- [ ] M3c — GHSA collector stabilization, additional IOC source types
 - [ ] M4 — Webhook alerting on critical threats
 - [ ] M5 — STIX 2.1 / TAXII export
 - [ ] M6 — NLP-based indicator extraction (spaCy)

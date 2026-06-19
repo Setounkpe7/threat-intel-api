@@ -1,0 +1,770 @@
+{
+  "/home/mdoub/Github/threat-intel-api/alembic/env.py": {
+    "mtime": 1779301422.9037094,
+    "hash": "4ce771f685bbd2cd7451c26f1410fa3c"
+  },
+  "/home/mdoub/Github/threat-intel-api/alembic/versions/0001_initial.py": {
+    "mtime": 1779301422.9038239,
+    "hash": "ce1757e62a673cd1ca824a5d334f9f4c"
+  },
+  "/home/mdoub/Github/threat-intel-api/alembic/versions/0003_m3a_cross_source_schema.py": {
+    "mtime": 1779301422.9039552,
+    "hash": "02c9dc8edfd3aef858dda569c872fc29"
+  },
+  "/home/mdoub/Github/threat-intel-api/alembic/versions/0002_sector_profile_and_score.py": {
+    "mtime": 1779301422.903879,
+    "hash": "9123ebc51c8c0acf5f54159506370e6e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/__init__.py": {
+    "mtime": 1779301423.0532525,
+    "hash": "19f727f65e3991aa90b4248aba5f502a"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/main.py": {
+    "mtime": 1781900087.5598485,
+    "hash": "d544c24c2d8e582ec93b4554d749010c"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/core/exceptions.py": {
+    "mtime": 1779301423.0857177,
+    "hash": "a1ce8cef324d6427ac436a27eace8561"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/core/logging.py": {
+    "mtime": 1779320200.6184595,
+    "hash": "3023c0c9aada12f258b4375d49f3c640"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/core/db.py": {
+    "mtime": 1779301423.0854752,
+    "hash": "fef0b17fb2974cb161077fa23b999a79"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/core/scheduler.py": {
+    "mtime": 1779301423.0860672,
+    "hash": "c771e76ab2d2b48eedee087619c81b91"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/core/__init__.py": {
+    "mtime": 1779301423.0850887,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/core/config.py": {
+    "mtime": 1781893645.5300262,
+    "hash": "1b64ad6c1db170d7178b800f41370e40"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/cli/__init__.py": {
+    "mtime": 1779301423.0744846,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/cli/collect_once.py": {
+    "mtime": 1781900167.2641885,
+    "hash": "7c43a88f72c481fa5865927785c9095e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/analyzers/__init__.py": {
+    "mtime": 1779301423.0532525,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/threat_source.py": {
+    "mtime": 1779301423.0948746,
+    "hash": "f56485207dabab81931a4a81a4240ba0"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/threat_indicator.py": {
+    "mtime": 1779301423.0948746,
+    "hash": "370930cb5f2962eb71e12e20423b68ef"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/sector_profile.py": {
+    "mtime": 1779301423.0944738,
+    "hash": "6a4c530e83ac2ba2c3b1a256ada84f5f"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/threat.py": {
+    "mtime": 1779301423.094764,
+    "hash": "36a32713029ed649bf4a42ea6d20f7a0"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/base.py": {
+    "mtime": 1779301423.0862978,
+    "hash": "b74b763d749dfcd27ccb3dbc3e2005ae"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/sector_score.py": {
+    "mtime": 1779301423.0947075,
+    "hash": "38b1879b7f6349187f6cce9a5d958ba8"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/collector_run.py": {
+    "mtime": 1779301423.0862978,
+    "hash": "50a0ccd12ecbda0e4a185d001ae896c9"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/__init__.py": {
+    "mtime": 1779301423.0862045,
+    "hash": "a0e764863cf93a80cdf70f53c26983db"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/cwe.py": {
+    "mtime": 1779301423.0933273,
+    "hash": "a03038d03377683133e808ecfcb9120c"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/source.py": {
+    "mtime": 1779301423.094764,
+    "hash": "08237425be83a697b110493a20b455da"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/models/cve.py": {
+    "mtime": 1779301423.086521,
+    "hash": "89ebf6d4a7f186b64b6d5c163a97a58b"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/ingest.py": {
+    "mtime": 1781894249.919937,
+    "hash": "9f6443810ee41d940dd7b6d56f860cb8"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/rss_feed.py": {
+    "mtime": 1781899769.9784672,
+    "hash": "206cfd584ade6a80f3f3411b4a5f2490"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/sector_profile.py": {
+    "mtime": 1779301423.1056724,
+    "hash": "6955ce65800c739ec52eb5f0fc37943b"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/health.py": {
+    "mtime": 1779301423.1043274,
+    "hash": "2e018c30d8e01aaeed940a4ca3db676d"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/threat.py": {
+    "mtime": 1779301423.1056724,
+    "hash": "1462574cd2d992d6a09ef8658b78c143"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/__init__.py": {
+    "mtime": 1779301423.0948746,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/cve.py": {
+    "mtime": 1779301423.0950348,
+    "hash": "4bc176e2360f8fe58121b2f9a1f3a4c3"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/sector.py": {
+    "mtime": 1779301423.1054037,
+    "hash": "249b037571100a816f76d4799fe4106e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/api/indicators.py": {
+    "mtime": 1779301423.0950348,
+    "hash": "4c79b6fc6c29598ff7c4b15e36859827"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/api/sources.py": {
+    "mtime": 1779301423.0950348,
+    "hash": "a9e16fb60eadb5f805c631a3f50e7d58"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/api/__init__.py": {
+    "mtime": 1779301423.0948746,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/schemas/api/admin.py": {
+    "mtime": 1779301423.0948746,
+    "hash": "39a1cc19419b13651dbf0af4e723e11a"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/ingest.py": {
+    "mtime": 1781895694.9688807,
+    "hash": "158b3c6211d6a81214fa4244cd4167d3"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/profile_loader.py": {
+    "mtime": 1779301423.1064699,
+    "hash": "51944754d600b2e418008265f9c8886e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/rss_feed_loader.py": {
+    "mtime": 1781899807.0432558,
+    "hash": "5c486df466486a792542246df29f71a0"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/scoring_job.py": {
+    "mtime": 1779301423.1064699,
+    "hash": "44aef3bac1d4e060450d19f2e3684343"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/threats.py": {
+    "mtime": 1779320200.6186442,
+    "hash": "ad6cf4a4edf57886b355a8001eeefbf2"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/__init__.py": {
+    "mtime": 1779301423.1056724,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/sector_scoring.py": {
+    "mtime": 1779301423.1065974,
+    "hash": "c7de6329fe9e17d2d022b4fff03b6393"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/ingestion.py": {
+    "mtime": 1779301423.1058853,
+    "hash": "d15612e9d6cb9200deb02d2fd0066453"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/services/sectors.py": {
+    "mtime": 1779301423.1065974,
+    "hash": "8c3d3b162f2b34c7be5726e0dc61814d"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/security.py": {
+    "mtime": 1779320200.6181026,
+    "hash": "604ea09647b927b18ed36bb0bcecf0cc"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/docs.py": {
+    "mtime": 1779320200.6177793,
+    "hash": "32dfa1c8212d5ecd838498918f6d159d"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/health.py": {
+    "mtime": 1779320200.6178489,
+    "hash": "e90a8c42ec25e0c50f97c6b841182b20"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/deps.py": {
+    "mtime": 1779301423.0603268,
+    "hash": "157d59817c5d8c6ca481cf0f0ae3610d"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/middleware.py": {
+    "mtime": 1779947365.8108397,
+    "hash": "61896b8933283361d1a295da82e75a9c"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/__init__.py": {
+    "mtime": 1779301423.0532525,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/problem.py": {
+    "mtime": 1779947365.8109107,
+    "hash": "9a149b3f78148b83f0839f1d527699b7"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/indicators.py": {
+    "mtime": 1779301423.0741751,
+    "hash": "0515d86c90fd632b57482d17713d7df5"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/sources.py": {
+    "mtime": 1779320200.6183162,
+    "hash": "656c1d44f12e17ff826f639dd5e8dcb6"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/threats.py": {
+    "mtime": 1779301423.0744846,
+    "hash": "c293f08488e0400dcace5479b17e0d56"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/__init__.py": {
+    "mtime": 1779301423.0737648,
+    "hash": "0705525cf6015a8590ad290e771ec036"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/admin.py": {
+    "mtime": 1779320200.618177,
+    "hash": "eeca65de6c727a1591c28d72c3873436"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/cve.py": {
+    "mtime": 1779301423.0741751,
+    "hash": "a87185c37f0382109e0cf5797c003a50"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/sectors.py": {
+    "mtime": 1779320200.6182518,
+    "hash": "ca357c60448601c8815ce9a3b7835f3d"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/v1/stats.py": {
+    "mtime": 1779320200.6183736,
+    "hash": "f771a479c9d072ea84c0ea663b277006"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/rss.py": {
+    "mtime": 1781895054.8779697,
+    "hash": "67d8bc73e7634c584f077a5c6a8a4289"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/_feedparse.py": {
+    "mtime": 1781894046.8405085,
+    "hash": "cfc31ee15966d14bceab177fa1ed58f2"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/cisa_kev.py": {
+    "mtime": 1779301423.084975,
+    "hash": "7339ab53eca85996976804787cfcca10"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/_extract.py": {
+    "mtime": 1781893847.5207644,
+    "hash": "b89a5b9e59321cb54048773d688186ac"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/github_advisories.py": {
+    "mtime": 1779301423.084975,
+    "hash": "62ce56d23acddcccf321229213d8a4de"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/_net.py": {
+    "mtime": 1781895122.56504,
+    "hash": "3d6bcd62fd4d413943fc452726486969"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/base.py": {
+    "mtime": 1779301423.084975,
+    "hash": "4982b084991983e67172a7014edeba9a"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/nvd.py": {
+    "mtime": 1779301423.0850887,
+    "hash": "058c3ee909c9758fa46fb12ddf087118"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/__init__.py": {
+    "mtime": 1779301423.0843272,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/collectors/_sanitize.py": {
+    "mtime": 1779301423.084903,
+    "hash": "a36e269c095832878dc6eeab6af2c839"
+  },
+  "/home/mdoub/Github/threat-intel-api/scripts/demo_seed.py": {
+    "mtime": 1779320200.6176817,
+    "hash": "5525860dd0ce84c6a81070177f2797a7"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/conftest.py": {
+    "mtime": 1779320200.61872,
+    "hash": "21075039d6c3093ad69cbd253626df01"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/__init__.py": {
+    "mtime": 1779301423.1067038,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_demo_seed.py": {
+    "mtime": 1779320200.6189082,
+    "hash": "4eb1b6bec2abd0f6c6f11a5462a56af6"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_collector_resilience.py": {
+    "mtime": 1779301423.1243277,
+    "hash": "bc73e28aaef1858c7e89f1023416ee09"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_cve.py": {
+    "mtime": 1779301423.1250575,
+    "hash": "87febf05c8c69c1cc2cfaa79f5decb6a"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_sectors.py": {
+    "mtime": 1779301423.1323018,
+    "hash": "49f68101a7b5c908f779f7f35c98ecb5"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_head_methods.py": {
+    "mtime": 1779320200.618957,
+    "hash": "ca7e7dd0f0c469ef8b04436152cddc7b"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_dedup_cross_source.py": {
+    "mtime": 1779301423.1251066,
+    "hash": "5050a87f7c7342e977dd97c59a14772f"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_threats.py": {
+    "mtime": 1779301423.1483278,
+    "hash": "8c47d8af91fc05113692fdf333eab168"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_health.py": {
+    "mtime": 1779301423.1303277,
+    "hash": "68a0d60a981de4c02ffc58c41ede44f4"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_landing.py": {
+    "mtime": 1779301423.1313276,
+    "hash": "98186f974db22fcfae2c88d35a68c37d"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_e2e_scoring.py": {
+    "mtime": 1779301423.1254148,
+    "hash": "5f7da8670c5e25c6ed35ec09304ef431"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_collector_counters.py": {
+    "mtime": 1779320200.6188598,
+    "hash": "e7574839974e8b23973dab380b0d18ff"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/__init__.py": {
+    "mtime": 1779301423.1153276,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_stats.py": {
+    "mtime": 1779301423.1325316,
+    "hash": "faa3133822e97003a6c9ef0b32fd5336"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_root_and_docs.py": {
+    "mtime": 1779301423.132232,
+    "hash": "9cfaf1d42aeeccfba2238c1b77787f1d"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_rss_enrichment.py": {
+    "mtime": 1781895784.5891676,
+    "hash": "fcbcfa50516bfb33c2595328252b8408"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/test_health_probes.py": {
+    "mtime": 1779301423.1313276,
+    "hash": "b0d3dd7386f7edd4f6cb051e8b900c65"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/api/test_sources_endpoint.py": {
+    "mtime": 1779320200.6188025,
+    "hash": "1e7e5f382d1c6f1354584d7a8f6309db"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/api/test_indicators_endpoint.py": {
+    "mtime": 1779301423.1153276,
+    "hash": "d3c3e3ff2cf4d3d82dee1f2103fd992a"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/api/test_threat_sources_endpoint.py": {
+    "mtime": 1779301423.1163225,
+    "hash": "75533aef0f8e671ab544d10323e2c743"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/api/__init__.py": {
+    "mtime": 1779301423.1153276,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/integration/api/test_admin_collectors_endpoint.py": {
+    "mtime": 1779301423.1153276,
+    "hash": "9fbc3cb8b8ec1e4bf14dc35a68c02dda"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_base_collector.py": {
+    "mtime": 1779301423.164387,
+    "hash": "c88bf799f24dd1d4ba7b877145178f88"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_cli.py": {
+    "mtime": 1779301423.1644967,
+    "hash": "914abcdac9360275580c269b66ec1054"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_main_source_sync.py": {
+    "mtime": 1779301423.2363288,
+    "hash": "ca1570293bf14ffe5a7e2bff87040632"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_logging.py": {
+    "mtime": 1779301423.2203286,
+    "hash": "5439a1376659e820701289a5622e3d66"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_main_rss_wiring.py": {
+    "mtime": 1781900052.610104,
+    "hash": "603775b7bcfc6adbb9a1ca99d967688a"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_models_sector_profile.py": {
+    "mtime": 1779301423.2372878,
+    "hash": "cf3484757952b9fdcd68955c675042fa"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_exceptions.py": {
+    "mtime": 1779301423.202295,
+    "hash": "712e5cd1844515144c20e7dcf4e384d7"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_models_sector_score.py": {
+    "mtime": 1779301423.2372878,
+    "hash": "48507f5c6c36e865bdcc8d063bfc0f80"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_config_sentry.py": {
+    "mtime": 1779301423.1933284,
+    "hash": "5eba6024666fa968baf5f0081c0aed91"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_config.py": {
+    "mtime": 1781893618.1389303,
+    "hash": "88762f1d50dbc4d82b2712f81a325c6a"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_sentry_init.py": {
+    "mtime": 1779301423.254329,
+    "hash": "e503c533f4ea66ec7dc912e6286c2b40"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_logging_scrub.py": {
+    "mtime": 1779301423.2253287,
+    "hash": "b8119043fbdedd9461282189840711d4"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_models_source.py": {
+    "mtime": 1779301423.2443287,
+    "hash": "6094136c3bdfe6fb8a55a5bfe9cc006f"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_profile_loader.py": {
+    "mtime": 1779301423.2457783,
+    "hash": "ee4a419e90e5b5f34d0c47f115c6dc73"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_schemas.py": {
+    "mtime": 1781894243.1402843,
+    "hash": "052dba63f1fbc090d81ab812b142476f"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_models_threat.py": {
+    "mtime": 1779301423.2443287,
+    "hash": "8d94221a4a39850c3a2ef768c4b24ae5"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/__init__.py": {
+    "mtime": 1779301423.163328,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_migration_0003.py": {
+    "mtime": 1779301423.2363288,
+    "hash": "c18e31b1f33f6a60efca26f4d5e60d37"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_config_database_url.py": {
+    "mtime": 1779301423.1733282,
+    "hash": "5d3e85e1debbb2bbb8e87acbea9ca568"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_config_inline_comments.py": {
+    "mtime": 1779301423.1833282,
+    "hash": "c0bbb43c9b15698db9708102fc04276c"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_scoring_job.py": {
+    "mtime": 1779301423.2503288,
+    "hash": "b4fa87a6e8eca68ba1bef578a1883a01"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_ingestion.py": {
+    "mtime": 1779301423.2083285,
+    "hash": "ca9744e444097a6057072d8081ad5224"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_schemas_sector_profile.py": {
+    "mtime": 1779301423.2503288,
+    "hash": "7d00c0919e280d2bf6101fa3127a6b48"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_nvd_collector.py": {
+    "mtime": 1779301423.2455547,
+    "hash": "73b173fcadd300b548186bbe2de46860"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_db.py": {
+    "mtime": 1779301423.2013283,
+    "hash": "355f65fc56dbbab5e89555cfb17b5d27"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/test_sector_scoring.py": {
+    "mtime": 1779301423.2509615,
+    "hash": "4176abb260c2d24ea7e9fe2ba979edc3"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/schemas/test_ingest.py": {
+    "mtime": 1779301423.1641507,
+    "hash": "3573f567c04637e87540976703345931"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/schemas/__init__.py": {
+    "mtime": 1779301423.1641507,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/test_collector_run_lifecycle.py": {
+    "mtime": 1779301423.1641507,
+    "hash": "b950daaa20b349ec4e444a392e133228"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/test_ingest_dedup.py": {
+    "mtime": 1779301423.1641507,
+    "hash": "fc134fd94e091af4407d18c8eb2f0a47"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/test_rss_feed_loader.py": {
+    "mtime": 1781899785.169546,
+    "hash": "e11bc5a83c46162662f753d81d91095b"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/__init__.py": {
+    "mtime": 1779301423.1641507,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/test_ingest_rss.py": {
+    "mtime": 1781895308.522038,
+    "hash": "c1db4f3138884d56fbf9f0134bd7e030"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/test_sector_scoring_m3a.py": {
+    "mtime": 1779301423.164387,
+    "hash": "1c69795ac54cd7ff9c2c79c6f5b2ba90"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/services/test_recompute_canonical.py": {
+    "mtime": 1779301423.164387,
+    "hash": "dbaa800ea2ca4ea8814d66216c09aaef"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_net.py": {
+    "mtime": 1781895060.804169,
+    "hash": "975272432eb81a196038641621ba8c49"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_base.py": {
+    "mtime": 1779301423.163328,
+    "hash": "e142d276054c6c64c42c430aad6ee415"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_extract.py": {
+    "mtime": 1781893821.2370522,
+    "hash": "4bb20def4924c7e86879e66163fdd6ff"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_cisa_kev.py": {
+    "mtime": 1779301423.163328,
+    "hash": "eff02ddc7bc01fec27face604537ae86"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_rss_collector.py": {
+    "mtime": 1781894478.0486312,
+    "hash": "15523ebf857a5e83fef03d0cbb1cf74c"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_github_advisories.py": {
+    "mtime": 1779301423.1641507,
+    "hash": "0e85bbe355fff559a7901f33cdfb8efb"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/__init__.py": {
+    "mtime": 1779301423.163328,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/unit/collectors/test_feedparse.py": {
+    "mtime": 1781894015.0942864,
+    "hash": "22f0204ac419fc3abb2427e4878c1006"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_injection.py": {
+    "mtime": 1779301423.1496835,
+    "hash": "5d53f2a1e7de7435da02e1c7de821b92"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_middleware_ordering.py": {
+    "mtime": 1779320200.6191096,
+    "hash": "508827ef49781b01ddabc955a2623a1a"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_private_profile_isolation.py": {
+    "mtime": 1779301423.1499362,
+    "hash": "186a20f810a0981c10b6ba266b7fb18e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_admin_auth.py": {
+    "mtime": 1779320200.6190631,
+    "hash": "22965467e668e8cb6c001773e7da5406"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/conftest.py": {
+    "mtime": 1779301423.1490824,
+    "hash": "af52e204ff74e19e7bd2b5bb16b4c663"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/__init__.py": {
+    "mtime": 1779301423.1483278,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_problem_json.py": {
+    "mtime": 1779947365.8111491,
+    "hash": "e99de9c7e7d2ded9798c0089abcce73b"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_no_info_leak.py": {
+    "mtime": 1779320200.6191607,
+    "hash": "f0972b8194a257d10d21d50ff5a07dd6"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_rate_limiting.py": {
+    "mtime": 1779320200.6192975,
+    "hash": "ef464fdb9cdfa27ff0b6e69459bb46e2"
+  },
+  "/home/mdoub/Github/threat-intel-api/tests/security/test_security_headers.py": {
+    "mtime": 1779320200.619366,
+    "hash": "61802c5438b807dc0231c78d510937d9"
+  },
+  "/home/mdoub/Github/threat-intel-api/docker-compose.yml": {
+    "mtime": 1779947286.506916,
+    "hash": "e9932bf2e00eb8a570a5fa842109225f"
+  },
+  "/home/mdoub/Github/threat-intel-api/CHANGELOG.md": {
+    "mtime": 1779301422.9031088,
+    "hash": "a66a46b6b0640b1bc7af3117a81b4440"
+  },
+  "/home/mdoub/Github/threat-intel-api/README.md": {
+    "mtime": 1781900459.2635288,
+    "hash": "95ec2a2afff554be2b19b47c743c81ec"
+  },
+  "/home/mdoub/Github/threat-intel-api/SECURITY.md": {
+    "mtime": 1779301422.9035468,
+    "hash": "e5a8a311639ee280b20dfc2cbaa8c138"
+  },
+  "/home/mdoub/Github/threat-intel-api/CONTRIBUTING.md": {
+    "mtime": 1779301422.90328,
+    "hash": "8e910a3c9bc584625990792739ffaecb"
+  },
+  "/home/mdoub/Github/threat-intel-api/CLAUDE.md": {
+    "mtime": 1781891391.7595024,
+    "hash": "0b445950e5031f4a3baa5f68a73edd7d"
+  },
+  "/home/mdoub/Github/threat-intel-api/CODE_OF_CONDUCT.md": {
+    "mtime": 1779301422.9032202,
+    "hash": "d7c8b7304db8588816b869dc95fe63c2"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/README.md": {
+    "mtime": 1779301423.042721,
+    "hash": "39ccea01db9efccac485277a6e9c37d6"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/public/finance.yaml": {
+    "mtime": 1779301423.043991,
+    "hash": "90630eeabe0644e9081a96d8b6976a29"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/public/saas.yaml": {
+    "mtime": 1779301423.0449288,
+    "hash": "ec20282ae39ae5e5b4f528d92f661f72"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/public/government.yaml": {
+    "mtime": 1779301423.0442328,
+    "hash": "496d8abb1094817d605e38944ccf603c"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/public/ics.yaml": {
+    "mtime": 1779301423.0446906,
+    "hash": "897f7ffb185a25b3545ff018175b9c1c"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/public/healthcare.yaml": {
+    "mtime": 1779301423.044475,
+    "hash": "e019e3ea04e39f98a23bededf829d0c1"
+  },
+  "/home/mdoub/Github/threat-intel-api/profiles/public/ecommerce.yaml": {
+    "mtime": 1779301423.043446,
+    "hash": "769e0c0e941714d7ec23b96e25628986"
+  },
+  "/home/mdoub/Github/threat-intel-api/src/threat_intel/api/templates/landing.html": {
+    "mtime": 1779301423.0737648,
+    "hash": "456b43d5958f143298304b20b9f333a8"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/INSTALLATION.md": {
+    "mtime": 1779301422.9043596,
+    "hash": "f0ad9186aafb1389dcd3a3482e6d56b1"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/RELEASING.md": {
+    "mtime": 1779947286.506916,
+    "hash": "b0ba3e395aa5129d0899c93a5427ed69"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/INDICATORS.md": {
+    "mtime": 1779301422.9043012,
+    "hash": "7d6b74eb5bc1c7a19c509deee29ff0ee"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/API_USAGE.md": {
+    "mtime": 1779301422.904082,
+    "hash": "6aa735b6ee980435a4d22c4985cdafcc"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/DEPLOYMENT.md": {
+    "mtime": 1779301422.9042485,
+    "hash": "17acc7bb120db5cba505b348daf12c15"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/SECURITY.md": {
+    "mtime": 1779320200.6171362,
+    "hash": "aceff985e739d3e2e7c7a70479434856"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/COLLECTORS.md": {
+    "mtime": 1781900446.6145785,
+    "hash": "be4dce7a2bc832de8af8eb62f7b56b94"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/audit-pass-2-spec.md": {
+    "mtime": 1779320200.6172543,
+    "hash": "45a0009213cbc22e658792318abadd56"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/SCORING.md": {
+    "mtime": 1779301422.904422,
+    "hash": "8dad03cb12d94ef65c7e673d3f7d9341"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/communication/medium-article.md": {
+    "mtime": 1777935540.716926,
+    "hash": "6b3b44709eafd07e8c0c7cb0467f1342"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/communication/launch-strategy.md": {
+    "mtime": 1778777955.1851819,
+    "hash": "d378fca602b32db9ccf5fc8db76f4ceb"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/communication/devto-article.md": {
+    "mtime": 1779944522.986694,
+    "hash": "13a3d99d7e9fa202a3b8021c42fc2345"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/communication/linkedin-posts.md": {
+    "mtime": 1779368654.2496963,
+    "hash": "0fe9e8640dd3a9106a5909f823cddb5c"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/plans/2026-05-28-sbom-cosign-release-pipeline-plan.md": {
+    "mtime": 1779947286.5072448,
+    "hash": "9388894e51df30272bf8698931841a34"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/plans/2026-04-28-railway-deployment.md": {
+    "mtime": 1779301423.0373268,
+    "hash": "863842fdbf7fdff6a054f21c4a5d6825"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/plans/2026-04-27-threat-intel-api-m1-plan.md": {
+    "mtime": 1779301423.0287032,
+    "hash": "c986fd99509b7482cef2bc1973dc314d"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/plans/2026-04-29-m3a-multi-source-cross-dedup-plan.md": {
+    "mtime": 1779301423.0383542,
+    "hash": "251e387c7875ee5c42aff5adb024949f"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/plans/2026-05-20-audit-pass-2.md": {
+    "mtime": 1779320200.617589,
+    "hash": "cf99d3e8c0ac14fdbadd5d7579397d16"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/plans/2026-06-19-rss-feeds-ingestion-plan.md": {
+    "mtime": 1781893378.89176,
+    "hash": "df7edf14318d890892c1ed2bffd54c5e"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/specs/2026-04-29-m3a-multi-source-cross-dedup-design.md": {
+    "mtime": 1779301423.0426583,
+    "hash": "b267daa2f79be6b4dff64327b9950e5e"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/specs/2026-05-28-sbom-cosign-design.md": {
+    "mtime": 1779947286.5073495,
+    "hash": "fa45bd674fe04ed1a2d2e2fc4f201cb0"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/specs/2026-04-28-railway-deployment-design.md": {
+    "mtime": 1779301423.0413268,
+    "hash": "f6911a464c43e5ee4da45d018cf4bead"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/superpowers/specs/2026-04-27-threat-intel-api-m1-design.md": {
+    "mtime": 1777305986.6010368,
+    "hash": "b5a344a0d8806e5a75d9909af664705f"
+  },
+  "/home/mdoub/Github/threat-intel-api/feeds/feeds.yaml": {
+    "mtime": 1781899761.2704225,
+    "hash": "55133850b10dc6a8ee57dc4d08fcbbed"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/assets/banner-rich.svg": {
+    "mtime": 1779301422.9253256,
+    "hash": "553f3768257cc0b44459f99340babaf2"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/assets/banner-rich.png": {
+    "mtime": 1779301422.9053397,
+    "hash": "7f112af3c5baa268bd5b77c9ed500efb"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/assets/architecture.png": {
+    "mtime": 1779301422.9047718,
+    "hash": "663821f365619b08ece3f2cade9f1618"
+  },
+  "/home/mdoub/Github/threat-intel-api/docs/assets/screenshots/hero-demo.gif": {
+    "mtime": 1779301423.0188708,
+    "hash": "f58e1e1aa0751a3a30d07d6217b85b2a"
+  }
+}

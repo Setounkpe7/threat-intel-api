@@ -1,0 +1,1 @@
+{"nodes": [{"id": "admin_collector_action_result", "label": "CollectorActionResult", "file_type": "code", "source_file": "src/threat_intel/schemas/api/admin.py", "source_location": "6", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
