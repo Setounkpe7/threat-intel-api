@@ -57,6 +57,8 @@ class Settings(BaseSettings):
 
     profiles_path: Path = Path("profiles")
 
+    feeds_path: Path = Path("feeds")
+
     # Admin API key required for /api/v1/admin/* and ?visibility=all.
     # Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
     admin_api_key: str | None = None

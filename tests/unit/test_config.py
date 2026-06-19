@@ -37,3 +37,19 @@ def test_github_token_strips_inline_comment(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_test_abc # personal token")
     settings = Settings()
     assert settings.github_token == "ghp_test_abc"
+
+
+def test_feeds_path_defaults_to_feeds_dir(monkeypatch):
+    from pathlib import Path
+
+    monkeypatch.delenv("FEEDS_PATH", raising=False)
+    from threat_intel.core.config import Settings
+
+    settings = Settings(database_url="sqlite+aiosqlite:///:memory:")  # type: ignore[call-arg]
+    assert settings.feeds_path == Path("feeds")
+
+
+def test_dependencies_importable():
+    import defusedxml.ElementTree  # noqa: F401
+
+    import feedparser  # noqa: F401
