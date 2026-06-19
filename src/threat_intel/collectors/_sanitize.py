@@ -7,10 +7,11 @@ M3a spec section 5.3.
 
 import re
 
-import bleach
+import nh3
 
-# Strip <script>...</script> blocks BEFORE bleach: bleach with tags=[] removes
-# the <script> tags but keeps the inner JS as plain text. We don't want that.
+# Strip <script>...</script> blocks BEFORE nh3 as defence-in-depth. nh3 already
+# drops <script> bodies (script is in ammonia's default clean_content_tags),
+# but the explicit pre-strip keeps the guarantee independent of nh3 defaults.
 _SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL)
 
 
@@ -19,4 +20,6 @@ def clean_text(value: str | None) -> str:
     if not value:
         return ""
     no_scripts = _SCRIPT_RE.sub("", value)
-    return bleach.clean(no_scripts, tags=[], strip=True)
+    # tags=set() => no tags allowed: strip every tag while keeping inner text,
+    # the nh3 equivalent of bleach.clean(text, tags=[], strip=True).
+    return nh3.clean(no_scripts, tags=set(), strip_comments=True)
