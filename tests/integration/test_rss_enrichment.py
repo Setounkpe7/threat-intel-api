@@ -92,6 +92,16 @@ async def test_rss_no_cve_idempotent(factory, sources):
         threats = (await s.execute(select(Threat))).scalars().all()
         assert len(threats) == 1
         assert threats[0].threat_type == "report"
+        # Exactly one ThreatSource row must exist for (dfir_report, "orphan-1")
+        ts_rows = (
+            await s.execute(
+                select(ThreatSource).where(
+                    ThreatSource.source_id == sources["dfir_report"].id,
+                    ThreatSource.external_id == "orphan-1",
+                )
+            )
+        ).scalars().all()
+        assert len(ts_rows) == 1
 
 
 async def test_rss_never_overrides_canonical_cvss(factory, sources):
@@ -114,3 +124,4 @@ async def test_rss_never_overrides_canonical_cvss(factory, sources):
     async with factory() as s:
         t = (await s.execute(select(Threat).where(Threat.id == tid))).scalar_one()
         assert t.cvss_score == 9.0  # NVD value preserved, RSS ignored
+        assert t.severity == Severity.high  # NVD-derived severity unchanged by RSS bogus "low"

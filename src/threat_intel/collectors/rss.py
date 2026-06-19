@@ -116,6 +116,10 @@ class RSSCollector(BaseCollector):
             corpus = f"{p.get('title') or ''} {p.get('summary') or ''}"
 
             indicators: list[CollectedIndicator] = []
+            # CVE/GHSA extraction runs on the RAW corpus (title + raw summary) so
+            # identifiers embedded in HTML markup are still found; IOC extraction
+            # runs on the sanitized `summary` to avoid false-positive matches on
+            # HTML attributes.  Do NOT unify these two inputs.
             for cve in extract_cves(corpus):
                 indicators.append(CollectedIndicator(type="cve", value=cve))
             for ghsa in extract_ghsa(corpus):

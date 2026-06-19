@@ -185,9 +185,36 @@ class IngestService:
     ) -> tuple[uuid.UUID, bool]:
         """Return (threat_id, created) for an RSS item with no CVE/GHSA matches.
 
-        Idempotent: looks up an existing ThreatSource row for (source_id, external_id)
-        before creating a new Threat, so repeated ingestion of the same RSS post
-        returns the same threat_id without creating duplicates.
+        Idempotent within a single coroutine: looks up an existing ThreatSource row
+        for (source_id, external_id) before creating a new Threat, so repeated
+        ingestion of the same RSS post returns the same threat_id without duplicates.
+
+        Concurrency caveat (TOCTOU race):
+          Two concurrent scheduler ticks for the SAME RSS source can both execute
+          the SELECT above and see 0 rows for the same (source_id, external_id),
+          then both proceed to _create_threat — producing duplicate autonomous
+          threats for the same item.  No-CVE items carry no CVE/GHSA indicators,
+          so the UNIQUE constraint on threat_indicators never fires to block one of
+          the two inserts.
+
+          Actual mitigations present in the scheduler (scheduler.py):
+            - max_instances=1 on the "collector_tick" APScheduler job prevents a
+              second _scheduler_tick coroutine from starting while one is still
+              running.
+            - coalesce=True collapses missed fires into a single execution,
+              preventing bursts of catch-up ticks.
+          Together these make it unlikely for two ticks to race in practice, but
+          they are NOT a hard guarantee: asyncio.create_task() inside the tick
+          spawns per-source tasks that run concurrently within the same tick, so
+          two different RSS sources cannot race with each other on the same
+          (source_id, external_id).  Within a single source the tasks are spawned
+          serially; a second task for the same source would only appear in the
+          NEXT tick, by which point next_run_at has been written (ingestion.py
+          line ~140) and the source is skipped.
+
+          Durable fix: add a UNIQUE(source_id, external_id) constraint to the
+          threat_source table via an Alembic migration (Plan 2 follow-up).  Until
+          then the window is narrow but non-zero on slow/failed ingestion runs.
         """
         existing = (
             await session.execute(
@@ -376,7 +403,16 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
         for tag in src_ts.tags or []:
             if tag not in tags:
                 tags.append(tag)
-    if "kev" in tags and _SEVERITY_RANK.get(severity, 0) < _SEVERITY_RANK[Severity.critical]:
+    # Only bump severity to critical when the `kev` tag comes from a canonical
+    # (non-RSS) source.  RSS feeds must not emit `kev` themselves; if one does it
+    # should not be trusted to drive a severity escalation.
+    canonical_tags: set[str] = set()
+    for pname in canonical_order:
+        pcandidate = by_name.get(pname)
+        if pcandidate is not None:
+            canonical_tags.update(pcandidate.tags or [])
+    kev_from_canonical = "kev" in canonical_tags
+    if kev_from_canonical and _SEVERITY_RANK.get(severity, 0) < _SEVERITY_RANK[Severity.critical]:
         severity = Severity.critical
 
     cwe_ids: list[str] = []

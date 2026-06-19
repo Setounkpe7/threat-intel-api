@@ -47,3 +47,9 @@ def test_parse_feed_maps_fields():
     assert "CVE-2021-44228" in e.title
     assert "advisory" in e.tags
     assert e.published.startswith("Mon, 13 Dec 2021")
+
+
+def test_parse_feed_rejects_xxe():
+    """parse_feed must raise CollectorParseError on XXE payloads (end-to-end gate)."""
+    with pytest.raises(CollectorParseError):
+        parse_feed(_XXE)

@@ -84,7 +84,9 @@ def rss(source_name: str) -> None:
                     await s.commit()
             service = IngestionService(session_factory=factory, collectors=[match])
             result = await service.run(source_name)
-            typer.echo(f"inserted={result.inserted} updated={result.updated}")
+            typer.echo(
+                f"inserted={result.inserted} updated={result.updated} unchanged={result.unchanged}"
+            )
         await engine.dispose()
 
     asyncio.run(_run())
