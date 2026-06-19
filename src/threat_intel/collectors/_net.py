@@ -1,40 +1,32 @@
-"""SSRF guard for collector outbound HTTP requests.
-
-Rejects URLs that resolve to private/loopback/link-local addresses to prevent
-server-side request forgery attacks when collector URLs come from config files.
-"""
+"""SSRF guard: only https to publicly-routable hosts may be fetched."""
 
 import ipaddress
 import socket
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import urlparse
 
 from threat_intel.core.exceptions import CollectorError
 
+Resolver = Callable[..., list[Any]]
 
-def assert_fetchable_url(url: str) -> None:
-    """Raise CollectorError if *url* must not be fetched (SSRF guard).
 
-    Checks:
-    - Scheme must be https or http.
-    - Hostname must resolve to a public routable IP (not private, loopback,
-      link-local, reserved, or multicast).
-    """
+def assert_fetchable_url(url: str, *, resolver: Resolver = socket.getaddrinfo) -> None:
     parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        raise CollectorError(f"URL scheme not allowed: {parsed.scheme!r} in {url!r}")
+    if parsed.scheme != "https":
+        raise CollectorError(f"refusing non-https feed url: {parsed.scheme!r}")
     host = parsed.hostname
     if not host:
-        raise CollectorError(f"URL has no hostname: {url!r}")
+        raise CollectorError("feed url has no host")
     try:
-        infos = socket.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
-    except OSError as exc:
-        raise CollectorError(f"DNS resolution failed for {host!r}: {exc}") from exc
-    for _family, _type, _proto, _canonname, sockaddr in infos:
-        raw_ip = sockaddr[0]
-        try:
-            ip = ipaddress.ip_address(raw_ip)
-        except ValueError:
-            continue
+        infos = resolver(host, 443, proto=socket.IPPROTO_TCP)
+    except socket.gaierror as e:
+        raise CollectorError(f"dns resolution failed for {host}: {e}") from e
+    if not infos:
+        raise CollectorError(f"no addresses resolved for {host}")
+    for info in infos:
+        addr = info[4][0]
+        ip = ipaddress.ip_address(addr)
         if (
             ip.is_private
             or ip.is_loopback
@@ -43,6 +35,4 @@ def assert_fetchable_url(url: str) -> None:
             or ip.is_multicast
             or ip.is_unspecified
         ):
-            raise CollectorError(
-                f"URL resolves to non-public IP {ip!s} — blocked by SSRF guard: {url!r}"
-            )
+            raise CollectorError(f"feed host {host} resolves to non-public ip {addr}")
