@@ -37,5 +37,10 @@ def test_rejects_rfc1918():
         assert_fetchable_url("https://int.test/feed", resolver=_resolver_to("10.1.2.3"))
 
 
+def test_rejects_cgnat():
+    with pytest.raises(CollectorError):
+        assert_fetchable_url("https://cgnat.test/feed", resolver=_resolver_to("100.64.1.1"))
+
+
 def test_accepts_public_https():
     assert_fetchable_url("https://www.cisa.gov/x.xml", resolver=_resolver_to("23.1.2.3"))

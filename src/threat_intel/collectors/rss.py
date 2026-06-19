@@ -62,6 +62,9 @@ class RSSCollector(BaseCollector):
         assert_fetchable_url(url)
 
     async def fetch(self, since: datetime) -> AsyncIterator[RawEvent]:
+        # `since` is intentionally unused: like the CISA KEV collector, we yield all
+        # current feed items and rely on downstream dedup (external_id idempotency /
+        # CVE-merge) rather than client-side date filtering.
         self._assert_fetchable(self.url)
         total = 0
         chunks: list[bytes] = []
