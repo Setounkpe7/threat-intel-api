@@ -22,6 +22,8 @@ dependencies = [
   "pyyaml>=6.0",
   "slowapi>=0.1.9",
   "feedgen>=1.0",
+  "feedparser>=6.0.11",
+  "defusedxml>=0.7.1",
   "sentry-sdk[fastapi]>=2.20",
   "jinja2>=3.1",
   "nh3>=0.2.18",
@@ -72,6 +74,14 @@ plugins = ["pydantic.mypy"]
 mypy_path = "src"
 namespace_packages = true
 explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = "defusedxml.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "feedparser"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

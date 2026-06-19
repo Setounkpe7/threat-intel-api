@@ -1,0 +1,27 @@
+# RSS/Atom threat-intel feeds (M3b MVP). Verify each URL with a real GET
+# before enabling in production. confidence: gov=80, vendor=70, research=50.
+feeds:
+  - source_name: cisa_advisories
+    url: https://www.cisa.gov/cybersecurity-advisories/all.xml
+    threat_type: advisory
+    interval_minutes: 120
+    indicator_confidence: 80
+    default_tags: [rss, "source:cisa_advisories", "category:advisory"]
+  - source_name: cisa_ics
+    url: https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml
+    threat_type: advisory
+    interval_minutes: 120
+    indicator_confidence: 80
+    default_tags: [rss, "source:cisa_ics", "category:ics"]
+  - source_name: cisco_psirt
+    url: https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml
+    threat_type: advisory
+    interval_minutes: 240
+    indicator_confidence: 70
+    default_tags: [rss, "source:cisco_psirt", "category:vendor"]
+  - source_name: dfir_report
+    url: https://thedfirreport.com/feed/
+    threat_type: report
+    interval_minutes: 240
+    indicator_confidence: 50
+    default_tags: [rss, "source:dfir_report", "category:research"]

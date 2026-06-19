@@ -36,3 +36,8 @@ class CollectedEvent(BaseModel):
     published_at: datetime
     last_modified_at: datetime
     raw_data: dict[str, Any] = {}
+
+    # --- RSS ingestion (M3b) ---
+    enrichment_mode: bool = False
+    threat_type: Literal["cve", "advisory", "report"] | None = None
+    indicator_confidence: int = 100

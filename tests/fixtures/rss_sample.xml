@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Sample</title>
+<item>
+  <title>Active exploitation of CVE-2021-44228</title>
+  <link>https://example.test/post/1</link>
+  <guid isPermaLink="false">post-1</guid>
+  <description>Log4Shell exploited in the wild. C2 at hxxp://evil[.]example[.]net/x &lt;script&gt;alert(1)&lt;/script&gt;</description>
+  <pubDate>Mon, 13 Dec 2021 00:00:00 GMT</pubDate>
+  <category>advisory</category>
+</item>
+<item>
+  <title>Threat actor report: new intrusion set</title>
+  <link>https://example.test/post/2</link>
+  <guid isPermaLink="false">post-2</guid>
+  <description>No CVE here, just TTPs and an IP 8.8.8.8</description>
+  <pubDate>Tue, 14 Dec 2021 00:00:00 GMT</pubDate>
+</item>
+</channel></rss>

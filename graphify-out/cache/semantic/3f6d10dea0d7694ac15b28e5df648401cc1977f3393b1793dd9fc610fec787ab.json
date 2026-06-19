@@ -1,0 +1,1 @@
+{"nodes": [{"id": "sector_profile_schema", "label": "SectorProfileSchema", "file_type": "code", "source_file": "src/threat_intel/schemas/sector_profile.py", "source_location": "14", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

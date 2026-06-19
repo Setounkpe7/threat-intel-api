@@ -46,3 +46,34 @@ def test_health_response_shape():
         stats=Stats(total_threats=100, threats_last_24h=5),
     )
     assert hr.status == "ok"
+
+
+def test_collected_event_enrichment_defaults():
+    from threat_intel.schemas.ingest import CollectedEvent
+
+    now = datetime.now(UTC)
+    ev = CollectedEvent(
+        source_name="s", external_id="x", title="t", published_at=now, last_modified_at=now
+    )
+    assert ev.enrichment_mode is False
+    assert ev.threat_type is None
+    assert ev.indicator_confidence == 100
+
+
+def test_collected_event_enrichment_set():
+    from threat_intel.schemas.ingest import CollectedEvent
+
+    now = datetime.now(UTC)
+    ev = CollectedEvent(
+        source_name="s",
+        external_id="x",
+        title="t",
+        published_at=now,
+        last_modified_at=now,
+        enrichment_mode=True,
+        threat_type="report",
+        indicator_confidence=50,
+    )
+    assert ev.enrichment_mode is True
+    assert ev.threat_type == "report"
+    assert ev.indicator_confidence == 50

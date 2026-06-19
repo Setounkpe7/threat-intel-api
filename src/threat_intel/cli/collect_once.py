@@ -56,5 +56,41 @@ def nvd() -> None:
     asyncio.run(_run())
 
 
+@app.command()
+def rss(source_name: str) -> None:
+    """Run a single RSS feed collection cycle synchronously."""
+    settings = get_settings()
+    configure_logging(env=settings.app_env, level=settings.log_level)
+
+    async def _run() -> None:
+        from threat_intel.services.rss_feed_loader import RSSFeedLoader
+
+        engine = build_engine(settings.database_url)
+        factory = session_factory(engine)
+        async with httpx.AsyncClient(timeout=30.0) as http:
+            collectors = RSSFeedLoader(http, settings, settings.feeds_path).build_collectors()
+            match = next((c for c in collectors if c.source_name == source_name), None)
+            if match is None:
+                typer.echo(f"no RSS feed named {source_name!r} in feeds.yaml")
+                raise typer.Exit(code=1)
+            async with factory() as s:
+                existing = (
+                    await s.execute(select(Source).where(Source.name == source_name))
+                ).scalar_one_or_none()
+                if existing is None:
+                    s.add(
+                        Source(name=source_name, kind=SourceKind.rss, url=match.url, enabled=True)
+                    )
+                    await s.commit()
+            service = IngestionService(session_factory=factory, collectors=[match])
+            result = await service.run(source_name)
+            typer.echo(
+                f"inserted={result.inserted} updated={result.updated} unchanged={result.unchanged}"
+            )
+        await engine.dispose()
+
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":
     app()

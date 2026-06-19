@@ -42,6 +42,7 @@ from threat_intel.models.base import SourceKind
 from threat_intel.models.source import Source
 from threat_intel.services.ingestion import IngestionService
 from threat_intel.services.profile_loader import SectorProfileLoader
+from threat_intel.services.rss_feed_loader import RSSFeedLoader
 from threat_intel.services.scoring_job import ThreatScoringJob, daily_recent_window
 
 logger = structlog.get_logger(__name__)
@@ -122,7 +123,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         nvd = NVDCollector(http_client=http, settings=settings)
         kev = CISAKEVCollector(http_client=http, settings=settings)
         ghsa = GitHubAdvisoriesCollector(http_client=http, settings=settings)
-        collectors = [nvd, kev, ghsa]
+        rss_collectors = RSSFeedLoader(http, settings, settings.feeds_path).build_collectors()
+        collectors = [nvd, kev, ghsa, *rss_collectors]
         scoring_job = ThreatScoringJob(session_factory=factory)
         ingestion = IngestionService(
             session_factory=factory, collectors=collectors, scoring_job=scoring_job
@@ -138,6 +140,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await _ensure_source_row(
             factory, "github_advisories", SourceKind.advisory, "https://api.github.com/graphql"
         )
+        for rc in rss_collectors:
+            await _ensure_source_row(factory, rc.source_name, SourceKind.rss, rc.url)
 
         async with factory() as session:
             await _sync_source_enabled_state(session, collectors)

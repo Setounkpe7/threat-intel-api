@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from threat_intel.models.base import IndicatorType, Severity
+from threat_intel.models.base import IndicatorType, Severity, SourceKind
 from threat_intel.models.cwe import CWE
 from threat_intel.models.threat import Threat
 from threat_intel.models.threat_indicator import ThreatIndicator
@@ -76,7 +76,23 @@ class IngestService:
     async def process(
         self, event: CollectedEvent, source_id: int
     ) -> tuple[Literal["created", "updated"], uuid.UUID]:
-        """Ingest one CollectedEvent — dedup, upsert, recompute canonical fields.
+        """Ingest one CollectedEvent — dispatches to canonical or enrichment regime.
+
+        enrichment_mode=False (CVE collectors: NVD, KEV, GHSA):
+            → _process_canonical: the original dedup/merge/create behavior.
+
+        enrichment_mode=True (RSS feeds):
+            → _process_enrichment: fan-out to matched CVE threats; idempotent
+              autonomous threat for no-CVE items.
+        """
+        if event.enrichment_mode:
+            return await self._process_enrichment(event, source_id)
+        return await self._process_canonical(event, source_id)
+
+    async def _process_canonical(
+        self, event: CollectedEvent, source_id: int
+    ) -> tuple[Literal["created", "updated"], uuid.UUID]:
+        """Original dedup logic for canonical CVE/advisory collectors.
 
         Single-task safe: the entire sequence (lookup → create/upsert → recompute)
         runs inside one session/transaction, so within a single coroutine no
@@ -129,13 +145,99 @@ class IngestService:
             outcome: Literal["created", "updated"] = "created" if created_threat else "updated"
             return outcome, threat_id
 
+    async def _process_enrichment(
+        self, event: CollectedEvent, source_id: int
+    ) -> tuple[Literal["created", "updated"], uuid.UUID]:
+        """Enrichment regime for RSS feeds.
+
+        If the event's indicators match ≥1 existing threat (via CVE/GHSA lookup):
+          - attach the RSS source + indicators to EACH matched threat
+          - recompute each matched threat
+          - NO merge_candidate, NO autonomous threat creation
+          - returns ("updated", matches[0])
+
+        If 0 matches: create/fetch an autonomous threat keyed on
+        (source_id, external_id) via _get_or_create_autonomous, then
+        upsert indicators and recompute.
+        """
+        async with self._sf() as session:
+            matches = await _lookup_threat_ids_by_indicators(session, event.indicators)
+            if matches:
+                for threat_id in matches:
+                    await self._upsert_threat_source(session, threat_id, source_id, event)
+                    await self._upsert_indicators(session, threat_id, event)
+                await session.flush()
+                for threat_id in matches:
+                    await recompute_canonical(session, threat_id)
+                await session.commit()
+                return "updated", matches[0]
+
+            threat_id, created = await self._get_or_create_autonomous(session, event, source_id)
+            await self._upsert_threat_source(session, threat_id, source_id, event)
+            await self._upsert_indicators(session, threat_id, event)
+            await session.flush()
+            await recompute_canonical(session, threat_id)
+            await session.commit()
+            return ("created" if created else "updated"), threat_id
+
+    async def _get_or_create_autonomous(
+        self, session: AsyncSession, event: CollectedEvent, source_id: int
+    ) -> tuple[uuid.UUID, bool]:
+        """Return (threat_id, created) for an RSS item with no CVE/GHSA matches.
+
+        Idempotent within a single coroutine: looks up an existing ThreatSource row
+        for (source_id, external_id) before creating a new Threat, so repeated
+        ingestion of the same RSS post returns the same threat_id without duplicates.
+
+        Concurrency caveat (TOCTOU race):
+          Two concurrent scheduler ticks for the SAME RSS source can both execute
+          the SELECT above and see 0 rows for the same (source_id, external_id),
+          then both proceed to _create_threat — producing duplicate autonomous
+          threats for the same item.  No-CVE items carry no CVE/GHSA indicators,
+          so the UNIQUE constraint on threat_indicators never fires to block one of
+          the two inserts.
+
+          Actual mitigations present in the scheduler (scheduler.py):
+            - max_instances=1 on the "collector_tick" APScheduler job prevents a
+              second _scheduler_tick coroutine from starting while one is still
+              running.
+            - coalesce=True collapses missed fires into a single execution,
+              preventing bursts of catch-up ticks.
+          Together these make it unlikely for two ticks to race in practice, but
+          they are NOT a hard guarantee: asyncio.create_task() inside the tick
+          spawns per-source tasks that run concurrently within the same tick, so
+          two different RSS sources cannot race with each other on the same
+          (source_id, external_id).  Within a single source the tasks are spawned
+          serially; a second task for the same source would only appear in the
+          NEXT tick, by which point next_run_at has been written (ingestion.py
+          line ~140) and the source is skipped.
+
+          Durable fix: add a UNIQUE(source_id, external_id) constraint to the
+          threat_source table via an Alembic migration (Plan 2 follow-up).  Until
+          then the window is narrow but non-zero on slow/failed ingestion runs.
+        """
+        existing = (
+            await session.execute(
+                select(ThreatSource.threat_id).where(
+                    ThreatSource.source_id == source_id,
+                    ThreatSource.external_id == event.external_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            return existing, False
+        threat_id = await self._create_threat(session, event)
+        return threat_id, True
+
     async def _create_threat(self, session: AsyncSession, event: CollectedEvent) -> uuid.UUID:
-        if any(i.type == "cve" for i in event.indicators):
+        if event.threat_type is not None:
+            threat_type = event.threat_type
+        elif any(i.type == "cve" for i in event.indicators):
             threat_type = "cve"
         elif any(i.type == "ghsa" for i in event.indicators):
             threat_type = "advisory"
         else:
-            threat_type = "cve"
+            threat_type = "advisory"
 
         threat = Threat(
             id=uuid.uuid4(),
@@ -221,7 +323,7 @@ class IngestService:
                     "indicator_type": IndicatorType[ind.type],
                     "value": ind.value,
                     "first_seen": now,
-                    "confidence": 100,
+                    "confidence": event.indicator_confidence,
                     "created_at": now,
                     "updated_at": now,
                 },
@@ -249,8 +351,13 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
         await session.refresh(src_ts, ["source"])
         by_name[src_ts.source.name] = src_ts
 
+    rss_names = {n for n, ts in by_name.items() if ts.source.kind == SourceKind.rss}
+    extra_names = [n for n in by_name if n not in _PRIORITY_ORDER]
+    effective_order = list(_PRIORITY_ORDER) + sorted(extra_names)
+    canonical_order = [n for n in effective_order if n not in rss_names]
+
     def _first_str(field: str) -> str | None:
-        for name in _PRIORITY_ORDER:
+        for name in effective_order:
             candidate = by_name.get(name)
             if candidate is None:
                 continue
@@ -265,7 +372,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
     cvss_score: float | None = None
     cvss_vector: str | None = None
     cvss_version: str | None = None
-    for pname in _PRIORITY_ORDER:
+    for pname in canonical_order:
         pcandidate = by_name.get(pname)
         if pcandidate is None:
             continue
@@ -279,7 +386,7 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
             break
 
     severity: Severity = Severity.unknown
-    for pname in _PRIORITY_ORDER:
+    for pname in canonical_order:
         pcandidate = by_name.get(pname)
         if pcandidate is None:
             continue
@@ -296,7 +403,16 @@ async def recompute_canonical(session: AsyncSession, threat_id: uuid.UUID) -> No
         for tag in src_ts.tags or []:
             if tag not in tags:
                 tags.append(tag)
-    if "kev" in tags and _SEVERITY_RANK.get(severity, 0) < _SEVERITY_RANK[Severity.critical]:
+    # Only bump severity to critical when the `kev` tag comes from a canonical
+    # (non-RSS) source.  RSS feeds must not emit `kev` themselves; if one does it
+    # should not be trusted to drive a severity escalation.
+    canonical_tags: set[str] = set()
+    for pname in canonical_order:
+        pcandidate = by_name.get(pname)
+        if pcandidate is not None:
+            canonical_tags.update(pcandidate.tags or [])
+    kev_from_canonical = "kev" in canonical_tags
+    if kev_from_canonical and _SEVERITY_RANK.get(severity, 0) < _SEVERITY_RANK[Severity.critical]:
         severity = Severity.critical
 
     cwe_ids: list[str] = []
