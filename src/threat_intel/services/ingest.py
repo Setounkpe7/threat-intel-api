@@ -130,12 +130,14 @@ class IngestService:
             return outcome, threat_id
 
     async def _create_threat(self, session: AsyncSession, event: CollectedEvent) -> uuid.UUID:
-        if any(i.type == "cve" for i in event.indicators):
+        if event.threat_type is not None:
+            threat_type = event.threat_type
+        elif any(i.type == "cve" for i in event.indicators):
             threat_type = "cve"
         elif any(i.type == "ghsa" for i in event.indicators):
             threat_type = "advisory"
         else:
-            threat_type = "cve"
+            threat_type = "advisory"
 
         threat = Threat(
             id=uuid.uuid4(),
@@ -221,7 +223,7 @@ class IngestService:
                     "indicator_type": IndicatorType[ind.type],
                     "value": ind.value,
                     "first_seen": now,
-                    "confidence": 100,
+                    "confidence": event.indicator_confidence,
                     "created_at": now,
                     "updated_at": now,
                 },
